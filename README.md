@@ -1,6 +1,6 @@
-<h1 align="center">usfx</h1>
+<h1 align="center">μsfx</h1>
 <p align="center">
-	Short description.
+	Generate sound effects for your game in realtime.
 </p>
 	
 <p align="center">
@@ -10,8 +10,6 @@
 	<img src="https://img.shields.io/crates/l/usfx.svg" alt="License"/>
 	<br/>
 </p>
-
-Long description.
 
 ## Example
 

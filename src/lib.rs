@@ -20,7 +20,7 @@ const PI2: f32 = PI * 2.0;
 /// A trait defining a struct as an oscillator.
 pub trait Oscillator: Send {
     /// Instantiate a new oscillator.
-    fn new(setup: OscillatorSetup) -> Self
+    fn new(sample_rate: f32, frequency: f32) -> Self
     where
         Self: Sized;
 
@@ -55,10 +55,10 @@ pub trait Oscillator: Send {
     }
 
     /// Create a lookup table so we don't have to calculate everything every frame.
-    fn build_lut(&self, setup: OscillatorSetup) -> Vec<f32> {
+    fn build_lut(&self, sample_rate: f32, frequency: f32) -> Vec<f32> {
         // Create a table twice the size so we don't have to use modulo on every frame
-        (0..setup.sample_rate * 2)
-            .map(|i| self.wave_func(i as f32, setup.frequency, setup.sample_rate as f32))
+        (0..sample_rate as usize * 2)
+            .map(|i| self.wave_func(i as f32, frequency, sample_rate))
             .collect()
     }
 
@@ -71,12 +71,22 @@ pub trait Oscillator: Send {
 /// Audio sample that procedurally generates it's sound.
 ///
 /// This is the builder that will construct the `Generator`.
+///
+/// ```rust
+/// // Generate a sine wave at 2khz
+/// let sine_wave = usfx::Sample::default()
+///     .osc_frequency(2000.0)
+///     .build::<usfx::SineWave>();
+///
+/// // Plug it into a audio library, see the examples for a cpal & SDL2 implementation
+/// ```
 pub struct Sample {
     sample_rate: usize,
     osc_frequency: f32,
 }
 
 impl Default for Sample {
+    /// The default is a 1khz wave with a sample rate of 441000.
     fn default() -> Self {
         Self {
             osc_frequency: 1000.0,
@@ -107,72 +117,79 @@ impl Sample {
     where
         O: Oscillator + 'static,
     {
-        let oscilattor_setup = OscillatorSetup {
-            // 1 khz
-            frequency: 1000.0,
-            sample_rate: 44_100,
-        };
-
         Generator {
-            oscillator: Box::new(<O>::new(oscilattor_setup)),
+            oscillator: Box::new(<O>::new(self.sample_rate as f32, self.osc_frequency)),
         }
     }
 }
 
+/// Convert samples with PCM.
 pub struct Generator {
     oscillator: Box<dyn Oscillator>,
 }
 
 impl Generator {
     /// Generate a frame for the sample.
+    ///
+    /// The output buffer can be smaller but not bigger than the sample size.
     pub fn generate(&mut self, mut output: &mut [f32]) {
         self.oscillator.generate(&mut output);
     }
 }
 
-/// Setup information for an oscillator.
-pub struct OscillatorSetup {
-    pub frequency: f32,
-    pub sample_rate: usize,
+// Oscillator generator, makes it so the implementation of a oscillator only needs to expose a wave
+// func & a name for the struct.
+macro_rules! oscillator {
+    ( $name:ident($index:ident, $frequency:ident, $sample_rate:ident) $wave_func:tt ) => {
+        /// A simple oscillator.
+        pub struct $name {
+            phase: usize,
+            phase_lut: Vec<f32>,
+        }
+
+        impl Oscillator for $name {
+            /// Create a new oscillator.
+            fn new(sample_rate: f32, frequency: f32) -> Self {
+                let mut osc = Self {
+                    phase: 0,
+                    phase_lut: vec![],
+                };
+                osc.phase_lut = osc.build_lut(sample_rate, frequency);
+
+                osc
+            }
+
+            /// Generate the wave function.
+            fn wave_func(&self, $index: f32, $frequency: f32, $sample_rate: f32) -> f32 {
+                $wave_func
+            }
+
+            /// Return the current index of the phase.
+            fn phase_index(&self) -> usize {
+                self.phase as usize
+            }
+
+            fn set_phase_index(&mut self, index: usize) {
+                self.phase = index;
+            }
+
+            /// Return the lookup table from the index until the end of the table.
+            fn phase_lut(&self, index: usize) -> &[f32] {
+                &self.phase_lut[index..]
+            }
+
+            fn phase_lut_size(&self) -> usize {
+                // We divide the size by half because that's the real size of the lookup table
+                self.phase_lut.len() / 2
+            }
+        }
+    };
 }
 
-/// A sine as waveform of the oscilattor.
-pub struct SineWave {
-    phase: usize,
-    phase_lut: Vec<f32>,
-}
+oscillator! { SineWave(index, frequency, sample_rate) {
+    (index * frequency * PI2 / sample_rate).sin()
+}}
 
-impl Oscillator for SineWave {
-    /// Create a new simple sine oscillator.
-    fn new(setup: OscillatorSetup) -> Self {
-        let mut sine = Self {
-            phase: 0,
-            phase_lut: vec![],
-        };
-
-        sine.phase_lut = sine.build_lut(setup);
-
-        sine
-    }
-
-    /// A simple sine wave.
-    fn wave_func(&self, index: f32, frequency: f32, sample_rate: f32) -> f32 {
-        (index * frequency * PI2 / sample_rate).sin()
-    }
-
-    fn phase_index(&self) -> usize {
-        self.phase as usize
-    }
-
-    fn set_phase_index(&mut self, index: usize) {
-        self.phase = index;
-    }
-
-    fn phase_lut(&self, index: usize) -> &[f32] {
-        &self.phase_lut[index..]
-    }
-
-    fn phase_lut_size(&self) -> usize {
-        self.phase_lut.len() / 2
-    }
-}
+oscillator! { SawWave(index, frequency, sample_rate) {
+    (index * frequency * PI2 / sample_rate).sin()
+}}
