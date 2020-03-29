@@ -80,7 +80,10 @@ impl Audio {
 }
 
 fn main() {
-    let sample = usfx::Sample::default().build::<usfx::SineWave>();
+    let sample = usfx::Sample::default()
+        .osc_frequency(441)
+        .sample_rate(44_100)
+        .build::<usfx::TriangleWave>();
 
     let mut audio = Audio::new();
 

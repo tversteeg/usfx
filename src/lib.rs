@@ -40,6 +40,7 @@ pub trait Oscillator: Send {
     fn phase_lut_size(&self) -> usize;
 
     /// Move the phase to a certain offset.
+    #[inline(always)]
     fn move_phase(&mut self, offset: usize) {
         self.set_phase_index((self.phase_index() + offset) % self.phase_lut_size());
     }
@@ -82,14 +83,14 @@ pub trait Oscillator: Send {
 /// ```
 pub struct Sample {
     sample_rate: usize,
-    osc_frequency: f32,
+    osc_frequency: usize,
 }
 
 impl Default for Sample {
-    /// The default is a 1khz wave with a sample rate of 441000.
+    /// The default is a 441hz wave with a sample rate of 441000.
     fn default() -> Self {
         Self {
-            osc_frequency: 1000.0,
+            osc_frequency: 441,
             sample_rate: 44_100,
         }
     }
@@ -97,7 +98,7 @@ impl Default for Sample {
 
 impl Sample {
     /// Set the frequency of the oscillator in hertz.
-    pub fn osc_frequency<'a>(&'a mut self, frequency: f32) -> &'a mut Self {
+    pub fn osc_frequency<'a>(&'a mut self, frequency: usize) -> &'a mut Self {
         self.osc_frequency = frequency;
 
         self
@@ -118,7 +119,7 @@ impl Sample {
         O: Oscillator + 'static,
     {
         Generator {
-            oscillator: Box::new(<O>::new(self.sample_rate as f32, self.osc_frequency)),
+            oscillator: Box::new(<O>::new(self.sample_rate as f32, self.osc_frequency as f32)),
         }
     }
 }
@@ -160,24 +161,29 @@ macro_rules! oscillator {
             }
 
             /// Generate the wave function.
+            #[inline(always)]
             fn wave_func(&self, $index: f32, $frequency: f32, $sample_rate: f32) -> f32 {
                 $wave_func
             }
 
             /// Return the current index of the phase.
+            #[inline(always)]
             fn phase_index(&self) -> usize {
                 self.phase as usize
             }
 
+            #[inline(always)]
             fn set_phase_index(&mut self, index: usize) {
                 self.phase = index;
             }
 
             /// Return the lookup table from the index until the end of the table.
+            #[inline(always)]
             fn phase_lut(&self, index: usize) -> &[f32] {
                 &self.phase_lut[index..]
             }
 
+            #[inline(always)]
             fn phase_lut_size(&self) -> usize {
                 // We divide the size by half because that's the real size of the lookup table
                 self.phase_lut.len() / 2
@@ -191,5 +197,28 @@ oscillator! { SineWave(index, frequency, sample_rate) {
 }}
 
 oscillator! { SawWave(index, frequency, sample_rate) {
-    (index * frequency * PI2 / sample_rate).sin()
+    let steps = sample_rate / frequency;
+
+    1.0 - ((index / steps) % 1.0) * 2.0
+}}
+
+oscillator! { SquareWave(index, frequency, sample_rate) {
+    let steps = sample_rate / frequency;
+
+    if (index / steps) % 1.0 < 0.5 {
+        1.0
+    } else {
+        -1.0
+    }
+}}
+
+oscillator! { TriangleWave(index, frequency, sample_rate) {
+    let steps = sample_rate / frequency;
+
+    let slope = (index / steps) % 1.0 * 2.0;
+    if slope < 1.0 {
+        -1.0 + slope * 2.0
+    } else {
+        3.0 - slope * 2.0
+    }
 }}
