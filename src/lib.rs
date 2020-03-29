@@ -6,7 +6,7 @@
 //!
 //! ## Example
 //! ```rust
-//! # use replace_me::*;
+//! # use usfx::*;
 //! ```
 
 // Test the code in README.md
