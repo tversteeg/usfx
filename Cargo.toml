@@ -1,5 +1,5 @@
 [package]
-name = "replace_me"
+name = "usfx"
 version = "0.1.0"
 authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
 license = "AGPL-3.0-or-later"
@@ -12,7 +12,14 @@ keywords = []
 categories = []
 
 [dependencies]
-anyhow = "1.0.27"
+wide = "0.4.3"
 
 [dev-dependencies]
-doc_comment = "0.3.3"
+cpal = "0.11.0"
+criterion = "0.3.1"
+doc-comment = "0.3.3"
+sdl2 = "0.33.0"
+
+[[bench]]
+name = "wave_type"
+harness = false
