@@ -38,8 +38,9 @@ pub use oscillator::{SawWave, SineWave, SquareWave, TriangleWave};
 /// ```
 ///
 /// [`Generator`]: struct.Generator.html
+#[derive(Debug)]
 pub struct Sample {
-    sample_rate: usize,
+    sample_rate: f32,
     osc_frequency: usize,
     env_attack: f32,
     env_decay: f32,
@@ -51,12 +52,12 @@ impl Default for Sample {
     /// The default is a 441hz wave with a sample rate of 441000.
     fn default() -> Self {
         Self {
-            sample_rate: 44_100,
+            sample_rate: 44_100.0,
             osc_frequency: 441,
             env_attack: 0.01,
             env_decay: 0.1,
-            env_sustain: 0.2,
-            env_release: 0.1,
+            env_sustain: 0.5,
+            env_release: 0.5,
         }
     }
 }
@@ -64,7 +65,7 @@ impl Default for Sample {
 impl Sample {
     /// Set the sample rate, this depends on the audio device.
     pub fn sample_rate(&'_ mut self, sample_rate: usize) -> &'_ mut Self {
-        self.sample_rate = sample_rate;
+        self.sample_rate = sample_rate as f32;
 
         self
     }
@@ -83,6 +84,27 @@ impl Sample {
         self
     }
 
+    /// Set the time it takes from the maximum height to go into the main plateau.
+    pub fn env_decay(&'_ mut self, decay: f32) -> &'_ mut Self {
+        self.env_decay = decay;
+
+        self
+    }
+
+    /// Set the height of the main plateau.
+    pub fn env_sustain(&'_ mut self, sustain: f32) -> &'_ mut Self {
+        self.env_sustain = sustain;
+
+        self
+    }
+
+    /// Set the time it takes to go from the end of the plateau to zero.
+    pub fn env_release(&'_ mut self, release: f32) -> &'_ mut Self {
+        self.env_release = release;
+
+        self
+    }
+
     /// Create the sample object.
     ///
     /// A type implementing the Oscillator trait is required as the generic argument.
@@ -97,9 +119,11 @@ impl Sample {
         O: Oscillator + 'static,
     {
         Generator {
+            finished: false,
             offset: 0,
-            oscillator: Box::new(<O>::new(self.sample_rate as f32, self.osc_frequency as f32)),
+            oscillator: Box::new(<O>::new(self.sample_rate, self.osc_frequency as f32)),
             envelope: Envelope::new(
+                self.sample_rate,
                 self.env_attack,
                 self.env_decay,
                 self.env_sustain,
@@ -114,9 +138,12 @@ impl Sample {
 /// This struct is created by [`Sample`].
 ///
 /// [`Sample`]: struct.Sample.html
+#[derive(Debug)]
 pub struct Generator {
+    /// Whether we are finished running the sample.
+    finished: bool,
     /// The total offset.
-    pub offset: usize,
+    offset: usize,
     /// The oscillator, because it's a trait it has to be boxed.
     oscillator: Box<dyn Oscillator>,
     /// The ADSR envelope.
@@ -139,10 +166,19 @@ impl Generator {
     /// generator.generate(&mut buffer);
     /// ```
     pub fn generate(&mut self, mut output: &mut [f32]) {
-        let buffer_len = output.len();
+        // Nothing to generate anymore
+        if self.finished {
+            // Fill the buffer with zeros
+            output.iter_mut().for_each(|tone| *tone = 0.0);
+            return;
+        }
 
+        // Run the oscillator
         self.oscillator.generate(&mut output, self.offset);
 
-        self.offset += buffer_len;
+        // Apply the ADSR and set the state if we're finished or not
+        self.finished = self.envelope.apply(&mut output, self.offset) == envelope::State::Done;
+
+        self.offset += output.len();
     }
 }

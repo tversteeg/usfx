@@ -1,9 +1,9 @@
-use std::{f32::consts::PI, slice::Iter as SliceIter};
+use std::{f32::consts::PI, fmt::Debug, slice::Iter as SliceIter};
 
 const PI2: f32 = PI * 2.0;
 
 /// A trait defining a struct as an oscillator.
-pub trait Oscillator: Send {
+pub trait Oscillator: Send + Debug {
     /// Instantiate a new oscillator.
     fn new(sample_rate: f32, frequency: f32) -> Self
     where
@@ -42,6 +42,7 @@ pub trait Oscillator: Send {
 macro_rules! oscillator {
     ( $(#[$outer:meta])* $name:ident($index:ident, $frequency:ident, $sample_rate:ident) $wave_func:tt ) => {
         $(#[$outer])*
+        #[derive(Debug)]
         pub struct $name {
             phase_lut: Vec<f32>,
             sample_rate: usize,
