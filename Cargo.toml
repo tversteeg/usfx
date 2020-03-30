@@ -11,9 +11,6 @@ description = ""
 keywords = []
 categories = []
 
-[dependencies]
-wide = "0.4.3"
-
 [dev-dependencies]
 cpal = "0.11.0"
 criterion = "0.3.1"

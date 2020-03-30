@@ -6,6 +6,7 @@ use std::{
 };
 
 /// Manages the audio.
+#[derive(Default)]
 pub struct Audio {
     sample: Arc<Mutex<Option<usfx::Generator>>>,
 }
@@ -40,7 +41,7 @@ impl Audio {
             // This is the only format usfx supports
             let format = cpal::Format {
                 channels: 1,
-                sample_rate: cpal::SampleRate(44_100),
+                sample_rate: cpal::SampleRate(22_050),
                 data_type: cpal::SampleFormat::F32,
             };
 
@@ -82,8 +83,8 @@ impl Audio {
 fn main() {
     let sample = usfx::Sample::default()
         .osc_frequency(441)
-        .sample_rate(44_100)
-        .build::<usfx::TriangleWave>();
+        .sample_rate(22_050)
+        .build::<usfx::SquareWave>();
 
     let mut audio = Audio::new();
 
