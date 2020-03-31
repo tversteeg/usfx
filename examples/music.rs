@@ -1,4 +1,9 @@
 use cpal::traits::{EventLoopTrait, HostTrait};
+use rand::prelude::*;
+use rust_music_theory::{
+    note::{Notes, PitchClass},
+    scale::{Mode, Scale, ScaleType},
+};
 use std::{
     sync::{Arc, Mutex},
     thread,
@@ -80,7 +85,7 @@ fn kick() -> Vec<usfx::Generator> {
     // Combine a short high punch with a longer low bass
     vec![
         usfx::Sample::default()
-            .osc_frequency(160)
+            .osc_frequency(160.0)
             .env_attack(0.05)
             .env_decay(0.05)
             .env_sustain(0.5)
@@ -88,7 +93,7 @@ fn kick() -> Vec<usfx::Generator> {
             .sample_rate(SAMPLE_RATE)
             .build::<usfx::SineWave>(),
         usfx::Sample::default()
-            .osc_frequency(150)
+            .osc_frequency(150.0)
             .env_attack(0.1)
             .env_decay(0.1)
             .env_sustain(0.5)
@@ -101,7 +106,7 @@ fn kick() -> Vec<usfx::Generator> {
 fn hat() -> Vec<usfx::Generator> {
     // An annoying high chirpy sound
     vec![usfx::Sample::default()
-        .osc_frequency(2000)
+        .osc_frequency(2000.0)
         .env_attack(0.01)
         .env_decay(0.01)
         .env_sustain(0.5)
@@ -110,13 +115,69 @@ fn hat() -> Vec<usfx::Generator> {
         .build::<usfx::SquareWave>()]
 }
 
-fn main() {
-    let mut audio = Audio::new();
+fn lead(lead_frequencies: &[f32], index: &mut usize) -> Vec<usfx::Generator> {
+    *index = (*index + 1) % lead_frequencies.len();
 
+    // The lead synth, frequency is based on the generated scale
+    vec![usfx::Sample::default()
+        .osc_frequency(lead_frequencies[*index])
+        .env_attack(0.02)
+        .env_decay(0.1)
+        .env_sustain(0.9)
+        .env_release(0.3)
+        .sample_rate(SAMPLE_RATE)
+        .build::<usfx::SawWave>()]
+}
+
+fn generate_lead_frequencies() -> Vec<f32> {
+    let mut rng = thread_rng();
+
+    // Generate a scale for the lead
+    let scale = Scale::new(
+        ScaleType::HarmonicMinor,
+        PitchClass::C,
+        4,
+        Some(Mode::Phrygian),
+    )
+    .unwrap();
+
+    // Get the notes
+    let scale_notes = scale.notes();
+
+    // Choose 8 random notes
+    (0..8)
+        .into_iter()
+        .map(
+            |_| match scale_notes.iter().choose(&mut rng).unwrap().pitch_class {
+                // Convert the pitch class of the note to a frequency
+                PitchClass::C => 261.6,
+                PitchClass::Cs => 277.2,
+                PitchClass::D => 293.7,
+                PitchClass::Ds => 311.1,
+                PitchClass::E => 329.6,
+                PitchClass::F => 349.2,
+                PitchClass::Fs => 370.0,
+                PitchClass::G => 392.0,
+                PitchClass::Gs => 415.3,
+                PitchClass::A => 440.0,
+                PitchClass::As => 466.2,
+                PitchClass::B => 493.9,
+            },
+        )
+        .collect()
+}
+
+fn main() {
+    // Spawn a background thread where an audio device is opened with cpal
+    let mut audio = Audio::new();
+    audio.run();
+
+    // The delay needed to follow the BPM
     let beat_delay_milliseconds = (60.0 / BPM * 1000.0 / 4.0) as u64;
 
-    // Spawn a background thread where an audio device is opened with cpal
-    audio.run();
+    let lead_frequencies = generate_lead_frequencies();
+
+    let mut current_lead = 0;
 
     // Really ugly way to layout a track
     loop {
@@ -131,6 +192,7 @@ fn main() {
 
         thread::sleep(Duration::from_millis(beat_delay_milliseconds));
 
+        audio.play(lead(&lead_frequencies[..], &mut current_lead));
         audio.play(hat());
 
         thread::sleep(Duration::from_millis(beat_delay_milliseconds));

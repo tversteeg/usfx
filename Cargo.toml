@@ -17,6 +17,7 @@ criterion = "0.3.1"
 doc-comment = "0.3.3"
 sdl2 = "0.33.0"
 rust-music-theory = "0.1.6"
+rand = "0.7.3"
 
 [[bench]]
 name = "wave_type"

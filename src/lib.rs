@@ -41,7 +41,7 @@ pub use oscillator::{SawWave, SineWave, SquareWave, TriangleWave};
 #[derive(Debug)]
 pub struct Sample {
     sample_rate: f32,
-    osc_frequency: usize,
+    osc_frequency: f32,
     env_attack: f32,
     env_decay: f32,
     env_release: f32,
@@ -53,7 +53,7 @@ impl Default for Sample {
     fn default() -> Self {
         Self {
             sample_rate: 44_100.0,
-            osc_frequency: 441,
+            osc_frequency: 441.0,
             env_attack: 0.01,
             env_decay: 0.1,
             env_sustain: 0.5,
@@ -71,7 +71,7 @@ impl Sample {
     }
 
     /// Set the frequency of the oscillator in hertz.
-    pub fn osc_frequency(&'_ mut self, frequency: usize) -> &'_ mut Self {
+    pub fn osc_frequency(&'_ mut self, frequency: f32) -> &'_ mut Self {
         self.osc_frequency = frequency;
 
         self
@@ -121,7 +121,7 @@ impl Sample {
         Generator {
             finished: false,
             offset: 0,
-            oscillator: Box::new(<O>::new(self.sample_rate, self.osc_frequency as f32)),
+            oscillator: Box::new(<O>::new(self.sample_rate, self.osc_frequency)),
             envelope: Envelope::new(
                 self.sample_rate,
                 self.env_attack,

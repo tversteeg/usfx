@@ -78,7 +78,7 @@ impl Audio {
 fn main() {
     // Create a low sample with a square wave
     let sample1 = usfx::Sample::default()
-        .osc_frequency(1000)
+        .osc_frequency(1000.0)
         .env_attack(0.1)
         .env_decay(0.1)
         .env_sustain(0.5)
