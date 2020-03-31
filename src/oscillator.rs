@@ -20,7 +20,7 @@ pub trait Oscillator: Send + Debug {
         output
             .iter_mut()
             .zip(self.phase_iter(offset))
-            .for_each(|(old, new)| *old = *new);
+            .for_each(|(old, new)| *old += *new);
     }
 
     /// Create a lookup table so we don't have to calculate everything every frame.

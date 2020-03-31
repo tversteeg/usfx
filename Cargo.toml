@@ -24,3 +24,7 @@ harness = false
 [[bench]]
 name = "envelope"
 harness = false
+
+[[bench]]
+name = "mixer"
+harness = false

@@ -8,26 +8,27 @@ use std::{
 /// Manages the audio.
 #[derive(Default)]
 pub struct Audio {
-    sample: Arc<Mutex<Option<usfx::Generator>>>,
+    mixer: Arc<Mutex<usfx::Mixer>>,
 }
 
 impl Audio {
     /// Instantiate a new audio object without a generator.
     pub fn new() -> Self {
         Self {
-            sample: Arc::new(Mutex::new(None)),
+            mixer: Arc::new(Mutex::new(usfx::Mixer::default())),
         }
     }
 
-    /// Play a sample.
-    pub fn play(&mut self, new: usfx::Generator) {
-        let mut sample = self.sample.lock().unwrap();
-        *sample = Some(new);
+    /// Play samples.
+    pub fn play(&mut self, samples: Vec<usfx::Generator>) {
+        let mut mixer = self.mixer.lock().unwrap();
+        // Add all the samples to the mixer
+        samples.into_iter().for_each(|sample| mixer.play(sample));
     }
 
     /// Start a thread which will emit the audio.
     pub fn run(&mut self) {
-        let sample = self.sample.clone();
+        let mixer = self.mixer.clone();
 
         thread::spawn(|| {
             // Setup the audio system
@@ -65,14 +66,7 @@ impl Audio {
                 match stream_data {
                     cpal::StreamData::Output {
                         buffer: cpal::UnknownTypeOutputBuffer::F32(mut buffer),
-                    } => match *sample.lock().unwrap() {
-                        Some(ref mut sample) => sample.generate(&mut buffer),
-                        None => {
-                            for elem in buffer.iter_mut() {
-                                *elem = 0.0;
-                            }
-                        }
-                    },
+                    } => mixer.lock().unwrap().generate(&mut buffer),
                     _ => panic!("output type buffer can not be used"),
                 }
             });
@@ -81,18 +75,24 @@ impl Audio {
 }
 
 fn main() {
-    let sample = usfx::Sample::default()
+    // Create a low sample with a square wave
+    let sample1 = usfx::Sample::default()
         .osc_frequency(441)
         .sample_rate(22_050)
         .build::<usfx::SquareWave>();
+    // Create a higher sample with a sine wave
+    let sample2 = usfx::Sample::default()
+        .osc_frequency(882)
+        .sample_rate(22_050)
+        .build::<usfx::SineWave>();
 
     let mut audio = Audio::new();
+
+    // Play the samples
+    audio.play(vec![sample1, sample2]);
 
     // Spawn a background thread where an audio device is opened with cpal
     audio.run();
 
-    // Play the sample
-    audio.play(sample);
-
-    thread::sleep(Duration::from_millis(5_000));
+    thread::sleep(Duration::from_millis(1_000));
 }

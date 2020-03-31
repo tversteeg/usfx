@@ -16,7 +16,7 @@ doc_comment::doctest!("../README.md");
 mod envelope;
 mod oscillator;
 
-use envelope::Envelope;
+use envelope::{Envelope, State};
 use oscillator::Oscillator;
 pub use oscillator::{SawWave, SineWave, SquareWave, TriangleWave};
 
@@ -136,12 +136,14 @@ impl Sample {
 /// Convert samples with PCM.
 ///
 /// This struct is created by [`Sample`].
+/// You can use this generator directly or plug it into a [`Mixer`] object.
 ///
 /// [`Sample`]: struct.Sample.html
+/// [`Mixer`]: struct.Mixer.html
 #[derive(Debug)]
 pub struct Generator {
     /// Whether we are finished running the sample.
-    finished: bool,
+    pub(crate) finished: bool,
     /// The total offset.
     offset: usize,
     /// The oscillator, because it's a trait it has to be boxed.
@@ -170,15 +172,91 @@ impl Generator {
         if self.finished {
             // Fill the buffer with zeros
             output.iter_mut().for_each(|tone| *tone = 0.0);
-            return;
+        } else {
+            self.run(&mut output);
         }
+    }
 
+    /// Internal generator, used by the mixer and this generate function.
+    pub(crate) fn run(&mut self, mut output: &mut [f32]) {
         // Run the oscillator
         self.oscillator.generate(&mut output, self.offset);
 
         // Apply the ADSR and set the state if we're finished or not
-        self.finished = self.envelope.apply(&mut output, self.offset) == envelope::State::Done;
+        if self.envelope.apply(&mut output, self.offset) == State::Done {
+            self.finished = true;
+        } else {
+            self.offset += output.len();
+        }
+    }
+}
 
-        self.offset += output.len();
+/// Manage samples and mix the volume output of each.
+///
+/// ```rust
+/// // Instantiate a new mixer
+/// let mut mixer = usfx::Mixer::default();
+///
+/// // Create a default sample as the sinewave
+/// let sample = usfx::Sample::default();
+///
+/// // Play two oscillators at the same time
+/// mixer.play(sample.build::<usfx::SineWave>());
+/// mixer.play(sample.build::<usfx::TriangleWave>());
+///
+/// // This buffer should be passed by the audio library.
+/// let mut buffer = [0.0; 44_100];
+/// // Fill the buffer with procedurally generated sound.
+/// mixer.generate(&mut buffer);
+/// ```
+#[derive(Debug, Default)]
+pub struct Mixer {
+    /// List of generators.
+    generators: Vec<Generator>,
+}
+
+impl Mixer {
+    /// Play a sample.
+    pub fn play(&mut self, generator: Generator) {
+        self.generators.push(generator);
+    }
+
+    /// Generate a frame for the sample.
+    ///
+    /// The output buffer can be smaller but not bigger than the sample size.
+    ///
+    /// ```rust
+    /// // Instantiate a new mixer
+    /// let mut mixer = usfx::Mixer::default();
+    ///
+    /// // Create a default sample as the sinewave
+    /// mixer.play(usfx::Sample::default().build::<usfx::SineWave>());
+    ///
+    /// // This buffer should be passed by the audio library
+    /// let mut buffer = [0.0; 44_100];
+    /// // Fill the buffer with procedurally generated sound
+    /// mixer.generate(&mut buffer);
+    /// ```
+    pub fn generate(&mut self, output: &mut [f32]) {
+        let generators_len = self.generators.len();
+        if generators_len == 0 {
+            // No generators are running, set the result to zero
+            output.iter_mut().for_each(|tone| *tone = 0.0);
+            return;
+        }
+
+        // Run the generators
+        self.generators
+            .iter_mut()
+            .for_each(|generator| generator.run(output));
+
+        // Remove the ones that are finished
+        self.generators.retain(|generator| generator.finished);
+
+        // Calculate the inverse so we can multiply instead of divide which is more efficient
+        let buffer_len_inv = 1.0 / generators_len as f32;
+
+        // Divide the generators by the current samples
+        output.iter_mut().for_each(|tone| *tone *= buffer_len_inv);
     }
 }
