@@ -168,16 +168,15 @@ impl Generator {
     /// generator.generate(&mut buffer);
     /// ```
     pub fn generate(&mut self, mut output: &mut [f32]) {
-        // Nothing to generate anymore
-        if self.finished {
-            // Fill the buffer with zeros
-            output.iter_mut().for_each(|tone| *tone = 0.0);
-        } else {
+        // Set the buffer to zero
+        output.iter_mut().for_each(|tone| *tone = 0.0);
+
+        if !self.finished {
             self.run(&mut output);
         }
     }
 
-    /// Internal generator, used by the mixer and this generate function.
+    /// Internal generator, used by the mixer and the generate function.
     pub(crate) fn run(&mut self, mut output: &mut [f32]) {
         // Run the oscillator
         self.oscillator.generate(&mut output, self.offset);
@@ -185,9 +184,9 @@ impl Generator {
         // Apply the ADSR and set the state if we're finished or not
         if self.envelope.apply(&mut output, self.offset) == State::Done {
             self.finished = true;
-        } else {
-            self.offset += output.len();
         }
+
+        self.offset += output.len();
     }
 }
 
@@ -238,10 +237,11 @@ impl Mixer {
     /// mixer.generate(&mut buffer);
     /// ```
     pub fn generate(&mut self, output: &mut [f32]) {
+        // Set the buffer to zero
+        output.iter_mut().for_each(|tone| *tone = 0.0);
+
         let generators_len = self.generators.len();
         if generators_len == 0 {
-            // No generators are running, set the result to zero
-            output.iter_mut().for_each(|tone| *tone = 0.0);
             return;
         }
 
@@ -251,7 +251,7 @@ impl Mixer {
             .for_each(|generator| generator.run(output));
 
         // Remove the ones that are finished
-        self.generators.retain(|generator| generator.finished);
+        self.generators.retain(|generator| !generator.finished);
 
         // Calculate the inverse so we can multiply instead of divide which is more efficient
         let buffer_len_inv = 1.0 / generators_len as f32;

@@ -6,6 +6,7 @@ use std::{
 };
 
 const SAMPLE_RATE: usize = 44_100;
+const BPM: f32 = 132.0;
 
 /// Manages the audio.
 #[derive(Default)]
@@ -75,24 +76,67 @@ impl Audio {
     }
 }
 
-fn main() {
-    // Create a low sample with a square wave
-    let sample1 = usfx::Sample::default()
-        .osc_frequency(1000)
-        .env_attack(0.1)
-        .env_decay(0.1)
-        .env_sustain(0.5)
-        .env_release(0.1)
-        .sample_rate(SAMPLE_RATE)
-        .build::<usfx::SineWave>();
+fn kick() -> Vec<usfx::Generator> {
+    // Combine a short high punch with a longer low bass
+    vec![
+        usfx::Sample::default()
+            .osc_frequency(160)
+            .env_attack(0.05)
+            .env_decay(0.05)
+            .env_sustain(0.5)
+            .env_release(0.05)
+            .sample_rate(SAMPLE_RATE)
+            .build::<usfx::SineWave>(),
+        usfx::Sample::default()
+            .osc_frequency(150)
+            .env_attack(0.1)
+            .env_decay(0.1)
+            .env_sustain(0.5)
+            .env_release(0.2)
+            .sample_rate(SAMPLE_RATE)
+            .build::<usfx::SineWave>(),
+    ]
+}
 
+fn hat() -> Vec<usfx::Generator> {
+    // An annoying high chirpy sound
+    vec![usfx::Sample::default()
+        .osc_frequency(2000)
+        .env_attack(0.01)
+        .env_decay(0.01)
+        .env_sustain(0.5)
+        .env_release(0.01)
+        .sample_rate(SAMPLE_RATE)
+        .build::<usfx::SquareWave>()]
+}
+
+fn main() {
     let mut audio = Audio::new();
 
-    // Play the samples
-    audio.play(vec![sample1]);
+    let beat_delay_milliseconds = (60.0 / BPM * 1000.0 / 4.0) as u64;
 
     // Spawn a background thread where an audio device is opened with cpal
     audio.run();
 
-    thread::sleep(Duration::from_millis(3_000));
+    // Really ugly way to layout a track
+    loop {
+        // If we want the music to play at the exact same time it's better to chain the vectors,
+        // but having a "random" delay creates a more organic feeling
+        audio.play(kick());
+        audio.play(hat());
+
+        thread::sleep(Duration::from_millis(beat_delay_milliseconds));
+
+        audio.play(hat());
+
+        thread::sleep(Duration::from_millis(beat_delay_milliseconds));
+
+        audio.play(hat());
+
+        thread::sleep(Duration::from_millis(beat_delay_milliseconds));
+
+        audio.play(hat());
+
+        thread::sleep(Duration::from_millis(beat_delay_milliseconds));
+    }
 }

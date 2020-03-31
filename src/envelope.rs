@@ -39,43 +39,47 @@ impl Envelope {
     pub fn apply(&mut self, buffer: &mut [f32], offset: usize) -> State {
         buffer.iter_mut().enumerate().for_each(|(index, tone)| {
             let index_with_offset = index + offset;
-            match self.state {
+            *tone *= match self.state {
                 // Going up
                 State::Attack => {
                     let multiplier = index_with_offset as f32 * self.attack_slope;
-                    *tone *= multiplier;
-
                     if multiplier >= 1.0 {
                         // Move to the new state when we are at the top
                         self.state = State::Decay(index_with_offset);
+
+                        1.0
+                    } else {
+                        multiplier
                     }
                 }
                 // Going down to the middle
                 State::Decay(last_offset) => {
                     let multiplier =
                         1.0 - ((index_with_offset - last_offset) as f32 * self.decay_slope);
-                    *tone *= multiplier;
-
                     if multiplier <= self.sustain_height {
                         // Move to the new state when we are at the sustain height
                         self.state = State::Release(index_with_offset);
+
+                        self.sustain_height
+                    } else {
+                        multiplier
                     }
                 }
                 // Going from the middle to the bottom
                 State::Release(last_offset) => {
                     let multiplier = self.sustain_height
                         - ((index_with_offset - last_offset) as f32 * self.release_slope);
-                    *tone *= multiplier;
-
                     if multiplier <= 0.0 {
                         // We are finished when the multiplier is zero
                         self.state = State::Done;
+
+                        0.0
+                    } else {
+                        multiplier
                     }
                 }
                 // Nothing left
-                State::Done => {
-                    *tone = 0.0;
-                }
+                State::Done => 0.0,
             }
         });
 
