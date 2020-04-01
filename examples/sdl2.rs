@@ -12,6 +12,7 @@ impl AudioCallback for Sample {
         self.sample.generate(out)
     }
 }
+
 fn main() {
     let sdl_context = sdl2::init().unwrap();
     let audio_subsystem = sdl_context.audio().unwrap();
@@ -22,7 +23,8 @@ fn main() {
         samples: None,
     };
 
-    let sample = usfx::Sample::default().build::<usfx::SineWave>();
+    // Create a default sample, which is a sine-wave of 441 hz
+    let sample = usfx::Sample::default().build();
 
     let device = audio_subsystem
         .open_playback(None, &desired_spec, |_spec| Sample { sample })

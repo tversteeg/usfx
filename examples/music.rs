@@ -10,7 +10,10 @@ use std::{
     time::Duration,
 };
 
+// Audio quality
 const SAMPLE_RATE: usize = 44_100;
+
+// Beats per minute
 const BPM: f32 = 132.0;
 
 /// Manages the audio.
@@ -23,15 +26,15 @@ impl Audio {
     /// Instantiate a new audio object without a generator.
     pub fn new() -> Self {
         Self {
-            mixer: Arc::new(Mutex::new(usfx::Mixer::default())),
+            mixer: Arc::new(Mutex::new(usfx::Mixer::new(SAMPLE_RATE))),
         }
     }
 
     /// Play samples.
-    pub fn play(&mut self, samples: Vec<usfx::Generator>) {
+    pub fn play(&mut self, samples: Vec<usfx::Sample>) {
         let mut mixer = self.mixer.lock().unwrap();
         // Add all the samples to the mixer
-        samples.into_iter().for_each(|sample| mixer.play(sample));
+        samples.into_iter().for_each(|sample| mixer.play(&sample));
     }
 
     /// Start a thread which will emit the audio.
@@ -81,52 +84,52 @@ impl Audio {
     }
 }
 
-fn kick() -> Vec<usfx::Generator> {
+fn kick() -> Vec<usfx::Sample> {
     // Combine a short high punch with a longer low bass
     vec![
-        usfx::Sample::default()
+        *usfx::Sample::default()
             .osc_frequency(160.0)
+            .osc_type(usfx::Oscillator::Sine)
             .env_attack(0.05)
             .env_decay(0.05)
             .env_sustain(0.5)
             .env_release(0.05)
-            .sample_rate(SAMPLE_RATE)
-            .build::<usfx::SineWave>(),
-        usfx::Sample::default()
+            .sample_rate(SAMPLE_RATE),
+        *usfx::Sample::default()
             .osc_frequency(150.0)
+            .osc_type(usfx::Oscillator::Sine)
             .env_attack(0.1)
             .env_decay(0.1)
             .env_sustain(0.5)
             .env_release(0.2)
-            .sample_rate(SAMPLE_RATE)
-            .build::<usfx::SineWave>(),
+            .sample_rate(SAMPLE_RATE),
     ]
 }
 
-fn hat() -> Vec<usfx::Generator> {
+fn hat() -> Vec<usfx::Sample> {
     // An annoying high chirpy sound
-    vec![usfx::Sample::default()
+    vec![*usfx::Sample::default()
         .osc_frequency(2000.0)
+        .osc_type(usfx::Oscillator::Square)
         .env_attack(0.01)
         .env_decay(0.01)
         .env_sustain(0.5)
         .env_release(0.01)
-        .sample_rate(SAMPLE_RATE)
-        .build::<usfx::SquareWave>()]
+        .sample_rate(SAMPLE_RATE)]
 }
 
-fn lead(lead_frequencies: &[f32], index: &mut usize) -> Vec<usfx::Generator> {
+fn lead(lead_frequencies: &[f32], index: &mut usize) -> Vec<usfx::Sample> {
     *index = (*index + 1) % lead_frequencies.len();
 
     // The lead synth, frequency is based on the generated scale
-    vec![usfx::Sample::default()
+    vec![*usfx::Sample::default()
         .osc_frequency(lead_frequencies[*index])
+        .osc_type(usfx::Oscillator::Saw)
         .env_attack(0.02)
         .env_decay(0.1)
         .env_sustain(0.9)
         .env_release(0.3)
-        .sample_rate(SAMPLE_RATE)
-        .build::<usfx::SawWave>()]
+        .sample_rate(SAMPLE_RATE)]
 }
 
 fn generate_lead_frequencies() -> Vec<f32> {

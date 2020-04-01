@@ -17,15 +17,14 @@ impl Audio {
     /// Instantiate a new audio object without a generator.
     pub fn new() -> Self {
         Self {
-            mixer: Arc::new(Mutex::new(usfx::Mixer::default())),
+            mixer: Arc::new(Mutex::new(usfx::Mixer::new(SAMPLE_RATE))),
         }
     }
 
     /// Play samples.
-    pub fn play(&mut self, samples: Vec<usfx::Generator>) {
-        let mut mixer = self.mixer.lock().unwrap();
-        // Add all the samples to the mixer
-        samples.into_iter().for_each(|sample| mixer.play(sample));
+    pub fn play(&mut self, sample: &usfx::Sample) {
+        // Add the sample to the mixer
+        self.mixer.lock().unwrap().play(sample);
     }
 
     /// Start a thread which will emit the audio.
@@ -76,20 +75,19 @@ impl Audio {
 }
 
 fn main() {
-    // Create a low sample with a square wave
-    let sample1 = usfx::Sample::default()
-        .osc_frequency(1000.0)
-        .env_attack(0.1)
-        .env_decay(0.1)
-        .env_sustain(0.5)
-        .env_release(0.1)
-        .sample_rate(SAMPLE_RATE)
-        .build::<usfx::SineWave>();
-
     let mut audio = Audio::new();
 
-    // Play the samples
-    audio.play(vec![sample1]);
+    // Play a low sample with a square wave
+    audio.play(
+        usfx::Sample::default()
+            .osc_frequency(1000.0)
+            .osc_type(usfx::Oscillator::Sine)
+            .env_attack(0.1)
+            .env_decay(0.1)
+            .env_sustain(0.5)
+            .env_release(0.1)
+            .sample_rate(SAMPLE_RATE),
+    );
 
     // Spawn a background thread where an audio device is opened with cpal
     audio.run();
