@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use usfx::*;
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -6,31 +6,75 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("generate", |b| {
         let mut buffer = [0.0; 2000];
 
-        let mut sample = Sample::default().build::<SineWave>();
+        let mut sample = Sample::default();
+        sample.osc_type(OscillatorType::Sine);
+
+        let mut mixer = Mixer::new(2000);
+        mixer.play(sample);
 
         b.iter(|| {
-            sample.generate(&mut buffer);
+            mixer.generate(&mut buffer);
         });
     });
 
     c.bench_function("sine wave setup", |b| {
+        let mut mixer = Mixer::new(2000);
+
+        let mut sample = Sample::default();
+        sample.osc_type(OscillatorType::Sine);
+
+        let mut freq = 1;
         b.iter(|| {
-            black_box(Sample::default().build::<SineWave>());
+            sample.osc_frequency(freq);
+
+            mixer.play(sample);
+
+            freq += 1;
         });
     });
     c.bench_function("saw wave setup", |b| {
+        let mut mixer = Mixer::new(2000);
+
+        let mut sample = Sample::default();
+        sample.osc_type(OscillatorType::Saw);
+
+        let mut freq = 1;
         b.iter(|| {
-            black_box(Sample::default().build::<SawWave>());
+            sample.osc_frequency(freq);
+
+            mixer.play(sample);
+
+            freq += 1;
         });
     });
     c.bench_function("square wave setup", |b| {
+        let mut mixer = Mixer::new(2000);
+
+        let mut sample = Sample::default();
+        sample.osc_type(OscillatorType::Square);
+
+        let mut freq = 1;
         b.iter(|| {
-            black_box(Sample::default().build::<SquareWave>());
+            sample.osc_frequency(freq);
+
+            mixer.play(sample);
+
+            freq += 1;
         });
     });
     c.bench_function("triangle wave setup", |b| {
+        let mut mixer = Mixer::new(2000);
+
+        let mut sample = Sample::default();
+        sample.osc_type(OscillatorType::Triangle);
+
+        let mut freq = 1;
         b.iter(|| {
-            black_box(Sample::default().build::<TriangleWave>());
+            sample.osc_frequency(freq);
+
+            mixer.play(sample);
+
+            freq += 1;
         });
     });
 }

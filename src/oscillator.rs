@@ -1,116 +1,94 @@
-use std::{f32::consts::PI, fmt::Debug, slice::Iter as SliceIter};
+use std::{cell::RefCell, f32::consts::PI};
 
 const PI2: f32 = PI * 2.0;
 
-/// A trait defining a struct as an oscillator.
-pub trait Oscillator: Send + Debug {
-    /// Instantiate a new oscillator.
-    fn new(sample_rate: f32, frequency: f32) -> Self
-    where
-        Self: Sized;
+/// Wave form generation type.
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+pub enum OscillatorType {
+    /// A continuus tone.
+    Sine,
+    /// Strong, clear, buzzing sound.
+    Saw,
+    /// Smooth sound, between sine & square.
+    Triangle,
+    /// Rich sound, between sine & saw.
+    Square,
+}
 
-    /// The function used to generate the wave table.
-    fn wave_func(&self, index: f32, frequency: f32, sample_rate: f32) -> f32;
+impl OscillatorType {
+    /// Build a lookup table from this type.
+    ///
+    /// The table will be twice the size of the sample rate so we can use the whole size with an
+    /// offset in it.
+    pub(crate) fn build_lut(self, frequency: f32, sample_rate: usize) -> Vec<f32> {
+        let wave_func = self.wave_function();
 
-    /// Get the lookup table.
-    fn phase_lut(&self, index: usize) -> &[f32];
-
-    /// Generate the output buffer.
-    fn generate(&mut self, output: &mut [f32], offset: usize) {
-        output
-            .iter_mut()
-            .zip(self.phase_iter(offset))
-            .for_each(|(old, new)| *old += *new);
-    }
-
-    /// Create a lookup table so we don't have to calculate everything every frame.
-    fn build_lut(&self, sample_rate: f32, frequency: f32) -> Vec<f32> {
         // Create a table twice the size so we don't have to use modulo on every frame
-        (0..sample_rate as usize * 2)
-            .map(|i| self.wave_func(i as f32, frequency, sample_rate))
+        (0..sample_rate * 2)
+            .map(|i| wave_func(i as f32, frequency, sample_rate as f32))
             .collect()
     }
 
-    /// Create an iterator that starts at the phase offset.
-    fn phase_iter(&self, offset: usize) -> SliceIter<f32> {
-        self.phase_lut(offset).iter()
+    /// The way the oscillator calculates the output wave.
+    ///
+    /// Used to build the lookup table.
+    fn wave_function(self) -> Box<dyn Fn(f32, f32, f32) -> f32> {
+        match self {
+            OscillatorType::Sine => Box::new(|index: f32, frequency: f32, sample_rate: f32| {
+                (index * frequency * PI2 / sample_rate).sin()
+            }),
+            OscillatorType::Saw => Box::new(|index: f32, frequency: f32, sample_rate: f32| {
+                let steps = sample_rate / frequency;
+
+                1.0 - ((index / steps) % 1.0) * 2.0
+            }),
+            OscillatorType::Triangle => Box::new(|index: f32, frequency: f32, sample_rate: f32| {
+                let steps = sample_rate / frequency;
+
+                let slope = (index / steps) % 1.0 * 2.0;
+                if slope < 1.0 {
+                    -1.0 + slope * 2.0
+                } else {
+                    3.0 - slope * 2.0
+                }
+            }),
+            OscillatorType::Square => Box::new(|index: f32, frequency: f32, sample_rate: f32| {
+                let steps = sample_rate / frequency;
+
+                if (index / steps) % 1.0 < 0.5 {
+                    1.0
+                } else {
+                    -1.0
+                }
+            }),
+        }
     }
 }
 
-// Oscillator generator, makes it so the implementation of a oscillator only needs to expose a wave
-// func & a name for the struct.
-macro_rules! oscillator {
-    ( $(#[$outer:meta])* $name:ident($index:ident, $frequency:ident, $sample_rate:ident) $wave_func:tt ) => {
-        $(#[$outer])*
-        #[derive(Debug)]
-        pub struct $name {
-            phase_lut: Vec<f32>,
-            sample_rate: usize,
-        }
-
-        impl Oscillator for $name {
-            /// Create a new oscillator.
-            fn new(sample_rate: f32, frequency: f32) -> Self {
-                let mut osc = Self {
-                    phase_lut: vec![],
-                    sample_rate: sample_rate as usize,
-                };
-                osc.phase_lut = osc.build_lut(sample_rate, frequency);
-
-                osc
-            }
-
-            /// Generate the wave function.
-            #[inline(always)]
-            fn wave_func(&self, $index: f32, $frequency: f32, $sample_rate: f32) -> f32 {
-                $wave_func
-            }
-
-            /// Return the lookup table from the index until the end of the table.
-            #[inline(always)]
-            fn phase_lut(&self, index: usize) -> &[f32] {
-                let rotating_index = index % self.sample_rate;
-                &self.phase_lut[rotating_index..]
-            }
-        }
-    };
+/// The oscillator just loops through the already populated lookup table.
+#[derive(Debug)]
+pub(crate) struct Oscillator {
+    /// The lookup table is a reference owned by the Mixer struct.
+    lut: RefCell<Vec<f32>>,
+    /// The sample rate, also half the size of the lookup table.
+    sample_rate: usize,
 }
 
-oscillator! {
-    /// A simple sine wave oscillator.
-    SineWave(index, frequency, sample_rate) {
-    (index * frequency * PI2 / sample_rate).sin()
-}}
-
-oscillator! {
-    /// A simple saw wave oscillator.
-    SawWave(index, frequency, sample_rate) {
-    let steps = sample_rate / frequency;
-
-    1.0 - ((index / steps) % 1.0) * 2.0
-}}
-
-oscillator! {
-    /// A simple square wave oscillator.
-    SquareWave(index, frequency, sample_rate) {
-    let steps = sample_rate / frequency;
-
-    if (index / steps) % 1.0 < 0.5 {
-        1.0
-    } else {
-        -1.0
+impl Oscillator {
+    /// Instantiate a new oscillator that uses the passed lookup table.
+    pub(crate) fn new(lut: RefCell<Vec<f32>>, sample_rate: usize) -> Self {
+        Self { lut, sample_rate }
     }
-}}
 
-oscillator! {
-    /// A simple triangle wave oscillator.
-    TriangleWave(index, frequency, sample_rate) {
-    let steps = sample_rate / frequency;
+    /// Fill the output buffer with generated sound.
+    pub(crate) fn generate(&mut self, output: &mut [f32], offset: usize) {
+        let rotating_index = offset % self.sample_rate;
 
-    let slope = (index / steps) % 1.0 * 2.0;
-    if slope < 1.0 {
-        -1.0 + slope * 2.0
-    } else {
-        3.0 - slope * 2.0
+        // Combine the size of the output buffer with the size of the cached frequencies buffer and
+        // add the frequencies to the output
+        output
+            .iter_mut()
+            .zip(self.lut.borrow()[rotating_index..].iter())
+            .for_each(|(old, new)| *old += *new);
     }
-}}
+}

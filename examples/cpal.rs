@@ -22,7 +22,7 @@ impl Audio {
     }
 
     /// Play samples.
-    pub fn play(&mut self, sample: &usfx::Sample) {
+    pub fn play(&mut self, sample: usfx::Sample) {
         // Add the sample to the mixer
         self.mixer.lock().unwrap().play(sample);
     }
@@ -77,17 +77,16 @@ impl Audio {
 fn main() {
     let mut audio = Audio::new();
 
+    let mut sample = usfx::Sample::default();
+    sample.osc_frequency(1000);
+    sample.osc_type(usfx::OscillatorType::Sine);
+    sample.env_attack(0.1);
+    sample.env_decay(0.1);
+    sample.env_sustain(0.5);
+    sample.env_release(0.1);
+
     // Play a low sample with a square wave
-    audio.play(
-        usfx::Sample::default()
-            .osc_frequency(1000.0)
-            .osc_type(usfx::Oscillator::Sine)
-            .env_attack(0.1)
-            .env_decay(0.1)
-            .env_sustain(0.5)
-            .env_release(0.1)
-            .sample_rate(SAMPLE_RATE),
-    );
+    audio.play(sample);
 
     // Spawn a background thread where an audio device is opened with cpal
     audio.run();

@@ -17,53 +17,36 @@ mod envelope;
 mod oscillator;
 
 use envelope::{Envelope, State};
-use oscillator::{Oscillator as OscillatorTrait, SawWave, SineWave, SquareWave, TriangleWave};
-
-/// Wave form generation type.
-#[derive(Debug, Copy, Clone)]
-pub enum Oscillator {
-    Sine,
-    Saw,
-    Triangle,
-    Square,
-}
-
-impl Oscillator {
-    /// Instantiate the oscillator struct.
-    fn create_struct(self, sample_rate: f32, frequency: f32) -> Box<dyn OscillatorTrait> {
-        match self {
-            Oscillator::Sine => Box::new(SineWave::new(sample_rate, frequency)),
-            Oscillator::Saw => Box::new(SawWave::new(sample_rate, frequency)),
-            Oscillator::Triangle => Box::new(TriangleWave::new(sample_rate, frequency)),
-            Oscillator::Square => Box::new(SquareWave::new(sample_rate, frequency)),
-        }
-    }
-}
+use oscillator::Oscillator;
+pub use oscillator::OscillatorType;
+use std::{cell::RefCell, collections::HashMap};
 
 /// Audio sample that procedurally generates it's sound.
 ///
-/// This is the builder that will construct the [`Generator`].
+/// Plug this into the [`Mixer`] object to play the sound.
 ///
 /// ```rust
 /// // Generate a sine wave at 2khz
-/// let mut sine_wave = usfx::Sample::default()
-///     .osc_frequency(2000.0)
-///     .osc_type(usfx::Oscillator::Sine)
-///     .build();
+/// let mut sine_wave = usfx::Sample::default();
+/// sine_wave.osc_frequency(2000);
+/// sine_wave.osc_type(usfx::OscillatorType::Sine);
+///
+/// // Add it to the mixer
+/// let mut mixer = usfx::Mixer::default();
+/// mixer.play(sine_wave);
 ///
 /// // Plug it into a audio library, see the examples for a cpal & SDL2 implementation
 /// // ...
 /// // Call the generator to get a buffer for the audio library
 /// # let mut buffer = [0.0];
-/// sine_wave.generate(&mut buffer);
+/// mixer.generate(&mut buffer);
 /// ```
 ///
 /// [`Generator`]: struct.Generator.html
 #[derive(Debug, Copy, Clone)]
 pub struct Sample {
-    sample_rate: f32,
-    osc_frequency: f32,
-    osc_type: Oscillator,
+    osc_frequency: usize,
+    osc_type: OscillatorType,
     env_attack: f32,
     env_decay: f32,
     env_release: f32,
@@ -74,9 +57,8 @@ impl Default for Sample {
     /// The default is a 441hz wave with a sample rate of 441000.
     fn default() -> Self {
         Self {
-            sample_rate: 44_100.0,
-            osc_frequency: 441.0,
-            osc_type: Oscillator::Sine,
+            osc_frequency: 441,
+            osc_type: OscillatorType::Sine,
             env_attack: 0.01,
             env_decay: 0.1,
             env_sustain: 0.5,
@@ -86,19 +68,8 @@ impl Default for Sample {
 }
 
 impl Sample {
-    /// Set the sample rate, this depends on the audio device.
-    ///
-    /// When the [`Mixer`] struct is used this field is ignored.
-    ///
-    /// [`Mixer`]: struct.Mixer.html
-    pub fn sample_rate<'a>(&'a mut self, sample_rate: usize) -> &'a mut Self {
-        self.sample_rate = sample_rate as f32;
-
-        self
-    }
-
     /// Set the frequency of the oscillator in hertz.
-    pub fn osc_frequency<'a>(&'a mut self, frequency: f32) -> &'a mut Self {
+    pub fn osc_frequency<'a>(&'a mut self, frequency: usize) -> &'a mut Self {
         self.osc_frequency = frequency;
 
         self
@@ -106,10 +77,10 @@ impl Sample {
 
     /// Set the type of the oscillator.
     ///
-    /// See the [`Oscillator`] enum for supported wave types.
+    /// See the [`OscillatorType`] enum for supported wave types.
     ///
-    /// [`Oscillator`]: enum.Oscillator.html
-    pub fn osc_type<'a>(&'a mut self, oscillator: Oscillator) -> &'a mut Self {
+    /// [`OscillatorType`]: enum.OscillatorType.html
+    pub fn osc_type<'a>(&'a mut self, oscillator: OscillatorType) -> &'a mut Self {
         self.osc_type = oscillator;
 
         self
@@ -142,35 +113,6 @@ impl Sample {
 
         self
     }
-
-    /// Create the sample object.
-    ///
-    /// A type implementing the Oscillator trait is required as the generic argument.
-    ///
-    /// ```rust
-    /// // Create a default sample with a sinewave
-    /// usfx::Sample::default().build();
-    /// ```
-    pub fn build(&self) -> Generator {
-        let envelope = Envelope::new(
-            self.sample_rate,
-            self.env_attack,
-            self.env_decay,
-            self.env_sustain,
-            self.env_release,
-        );
-
-        let oscillator = self
-            .osc_type
-            .create_struct(self.sample_rate, self.osc_frequency);
-
-        Generator {
-            finished: false,
-            offset: 0,
-            oscillator,
-            envelope,
-        }
-    }
 }
 
 /// Convert samples with PCM.
@@ -181,41 +123,19 @@ impl Sample {
 /// [`Sample`]: struct.Sample.html
 /// [`Mixer`]: struct.Mixer.html
 #[derive(Debug)]
-pub struct Generator {
+struct Generator {
     /// Whether we are finished running the sample.
     pub(crate) finished: bool,
     /// The total offset.
     offset: usize,
     /// The oscillator, because it's a trait it has to be boxed.
-    oscillator: Box<dyn OscillatorTrait>,
+    oscillator: Oscillator,
     /// The ADSR envelope.
     envelope: Envelope,
 }
 
 impl Generator {
-    /// Generate a frame for the sample.
-    ///
-    /// The output buffer can be smaller but not bigger than the sample size.
-    ///
-    /// ```rust
-    /// // Create a default sample as the sinewave
-    /// let mut generator = usfx::Sample::default().build();
-    ///
-    /// // This buffer should be passed by the audio library.
-    /// let mut buffer = [0.0; 44_100];
-    /// // Fill the buffer with procedurally generated sound.
-    /// generator.generate(&mut buffer);
-    /// ```
-    pub fn generate(&mut self, mut output: &mut [f32]) {
-        // Set the buffer to zero
-        output.iter_mut().for_each(|tone| *tone = 0.0);
-
-        if !self.finished {
-            self.run(&mut output);
-        }
-    }
-
-    /// Internal generator, used by the mixer and the generate function.
+    /// Generate the sound for the sample.
     fn run(&mut self, mut output: &mut [f32]) {
         // Run the oscillator
         self.oscillator.generate(&mut output, self.offset);
@@ -239,11 +159,11 @@ impl Generator {
 /// let sample = usfx::Sample::default();
 /// // Create another sample with a trianglewave
 /// let mut other_sample = usfx::Sample::default();
-/// other_sample.osc_type(usfx::Oscillator::Triangle);
+/// other_sample.osc_type(usfx::OscillatorType::Triangle);
 ///
 /// // Play two oscillators at the same time
-/// mixer.play(&sample);
-/// mixer.play(&other_sample);
+/// mixer.play(sample);
+/// mixer.play(other_sample);
 ///
 /// // This buffer should be passed by the audio library.
 /// let mut buffer = [0.0; 44_100];
@@ -256,6 +176,8 @@ pub struct Mixer {
     generators: Vec<Generator>,
     /// Store the sample rate so we can keep oscillator buffers.
     sample_rate: usize,
+    /// A lookup table of oscillator buffers.
+    oscillator_lookup: HashMap<(usize, OscillatorType), RefCell<Vec<f32>>>,
 }
 
 impl Mixer {
@@ -264,24 +186,26 @@ impl Mixer {
         Self {
             sample_rate,
             generators: vec![],
+            oscillator_lookup: HashMap::new(),
         }
     }
 
     /// Play a sample.
-    pub fn play(&mut self, sample: &Sample) {
+    pub fn play(&mut self, sample: Sample) {
         // Create the ADSR envelope generator
         let envelope = Envelope::new(
-            sample.sample_rate,
+            self.sample_rate as f32,
             sample.env_attack,
             sample.env_decay,
             sample.env_sustain,
             sample.env_release,
         );
 
+        // Get the cached buffer (or automatically create a new one)
+        let buffer = self.oscillator_buffer(sample.osc_frequency, sample.osc_type);
+
         // Create the oscillator
-        let oscillator = sample
-            .osc_type
-            .create_struct(self.sample_rate as f32, sample.osc_frequency);
+        let oscillator = Oscillator::new(buffer, self.sample_rate);
 
         // Combine them in a generator
         let generator = Generator {
@@ -304,7 +228,7 @@ impl Mixer {
     /// let mut mixer = usfx::Mixer::default();
     ///
     /// // Create a default sample as the sinewave
-    /// mixer.play(&usfx::Sample::default());
+    /// mixer.play(usfx::Sample::default());
     ///
     /// // This buffer should be passed by the audio library
     /// let mut buffer = [0.0; 44_100];
@@ -334,6 +258,32 @@ impl Mixer {
         // Divide the generators by the current samples
         output.iter_mut().for_each(|tone| *tone *= buffer_len_inv);
     }
+
+    /// Retrieve an oscillator buffer or create it when it doesn't exist yet.
+    fn oscillator_buffer(
+        &mut self,
+        frequency: usize,
+        oscillator_type: OscillatorType,
+    ) -> RefCell<Vec<f32>> {
+        match self.oscillator_lookup.get(&(frequency, oscillator_type)) {
+            // A buffer was already cached, return it
+            Some(buffer) => RefCell::clone(buffer),
+            // Nothing is found, cache a new buffer of frequencies
+            None => {
+                let lut =
+                    RefCell::new(oscillator_type.build_lut(frequency as f32, self.sample_rate));
+
+                // Clone it so it can be returned after the original object is inserted
+                let cloned_ref = RefCell::clone(&lut);
+
+                // Add the new lookup table to the cache
+                self.oscillator_lookup
+                    .insert((frequency, oscillator_type), lut);
+
+                cloned_ref
+            }
+        }
+    }
 }
 
 impl Default for Mixer {
@@ -342,6 +292,7 @@ impl Default for Mixer {
         Self {
             sample_rate: 44100,
             generators: vec![],
+            oscillator_lookup: HashMap::new(),
         }
     }
 }

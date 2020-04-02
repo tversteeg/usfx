@@ -34,13 +34,11 @@ impl Audio {
     pub fn play(&mut self, samples: Vec<usfx::Sample>) {
         let mut mixer = self.mixer.lock().unwrap();
         // Add all the samples to the mixer
-        samples.into_iter().for_each(|sample| mixer.play(&sample));
+        samples.into_iter().for_each(|sample| mixer.play(sample));
     }
 
     /// Start a thread which will emit the audio.
     pub fn run(&mut self) {
-        let mixer = self.mixer.clone();
-
         // Setup the audio system
         let host = cpal::default_host();
         let event_loop = host.event_loop();
@@ -63,6 +61,8 @@ impl Audio {
             .play_stream(stream_id)
             .expect("could not play stream");
 
+        let mixer = self.mixer.clone();
+
         thread::spawn(move || {
             event_loop.run(move |stream_id, stream_result| {
                 let stream_data = match stream_result {
@@ -84,57 +84,51 @@ impl Audio {
     }
 }
 
-fn kick() -> Vec<usfx::Sample> {
+fn kick(rng: &mut ThreadRng) -> Vec<usfx::Sample> {
     // Combine a short high punch with a longer low bass
     vec![
         *usfx::Sample::default()
-            .osc_frequency(160.0)
-            .osc_type(usfx::Oscillator::Sine)
+            .osc_frequency(rng.gen_range(155, 165))
+            .osc_type(usfx::OscillatorType::Sine)
             .env_attack(0.05)
             .env_decay(0.05)
             .env_sustain(0.5)
-            .env_release(0.05)
-            .sample_rate(SAMPLE_RATE),
+            .env_release(0.05),
         *usfx::Sample::default()
-            .osc_frequency(150.0)
-            .osc_type(usfx::Oscillator::Sine)
+            .osc_frequency(150)
+            .osc_type(usfx::OscillatorType::Sine)
             .env_attack(0.1)
             .env_decay(0.1)
             .env_sustain(0.5)
-            .env_release(0.2)
-            .sample_rate(SAMPLE_RATE),
+            .env_release(0.2),
     ]
 }
 
 fn hat() -> Vec<usfx::Sample> {
     // An annoying high chirpy sound
     vec![*usfx::Sample::default()
-        .osc_frequency(2000.0)
-        .osc_type(usfx::Oscillator::Square)
+        .osc_frequency(2000)
+        .osc_type(usfx::OscillatorType::Square)
         .env_attack(0.01)
         .env_decay(0.01)
         .env_sustain(0.5)
-        .env_release(0.01)
-        .sample_rate(SAMPLE_RATE)]
+        .env_release(0.01)]
 }
 
-fn lead(lead_frequencies: &[f32], index: &mut usize) -> Vec<usfx::Sample> {
+fn lead(lead_frequencies: &[usize], index: &mut usize) -> Vec<usfx::Sample> {
     *index = (*index + 1) % lead_frequencies.len();
 
     // The lead synth, frequency is based on the generated scale
     vec![*usfx::Sample::default()
         .osc_frequency(lead_frequencies[*index])
-        .osc_type(usfx::Oscillator::Saw)
+        .osc_type(usfx::OscillatorType::Saw)
         .env_attack(0.02)
         .env_decay(0.1)
         .env_sustain(0.9)
-        .env_release(0.3)
-        .sample_rate(SAMPLE_RATE)]
+        .env_release(0.3)]
 }
 
-fn generate_lead_frequencies() -> Vec<f32> {
-    let mut rng = thread_rng();
-
+fn generate_lead_frequencies(mut rng: &mut ThreadRng) -> Vec<usize> {
     // Generate a scale for the lead
     let scale = Scale::new(
         ScaleType::HarmonicMinor,
@@ -153,18 +147,18 @@ fn generate_lead_frequencies() -> Vec<f32> {
         .map(
             |_| match scale_notes.iter().choose(&mut rng).unwrap().pitch_class {
                 // Convert the pitch class of the note to a frequency
-                PitchClass::C => 261.6,
-                PitchClass::Cs => 277.2,
-                PitchClass::D => 293.7,
-                PitchClass::Ds => 311.1,
-                PitchClass::E => 329.6,
-                PitchClass::F => 349.2,
-                PitchClass::Fs => 370.0,
-                PitchClass::G => 392.0,
-                PitchClass::Gs => 415.3,
-                PitchClass::A => 440.0,
-                PitchClass::As => 466.2,
-                PitchClass::B => 493.9,
+                PitchClass::C => 262,
+                PitchClass::Cs => 277,
+                PitchClass::D => 294,
+                PitchClass::Ds => 311,
+                PitchClass::E => 330,
+                PitchClass::F => 349,
+                PitchClass::Fs => 370,
+                PitchClass::G => 392,
+                PitchClass::Gs => 415,
+                PitchClass::A => 440,
+                PitchClass::As => 466,
+                PitchClass::B => 494,
             },
         )
         .collect()
@@ -178,7 +172,11 @@ fn main() {
     // The delay needed to follow the BPM
     let beat_delay_milliseconds = (60.0 / BPM * 1000.0 / 4.0) as u64;
 
-    let lead_frequencies = generate_lead_frequencies();
+    // Initialize the random number generator
+    let mut rng = thread_rng();
+
+    // Procedurally generate frequencies for the lead
+    let lead_frequencies = generate_lead_frequencies(&mut rng);
 
     let mut current_lead = 0;
 
@@ -186,7 +184,7 @@ fn main() {
     loop {
         // If we want the music to play at the exact same time it's better to chain the vectors,
         // but having a "random" delay creates a more organic feeling
-        audio.play(kick());
+        audio.play(kick(&mut rng));
         audio.play(hat());
 
         thread::sleep(Duration::from_millis(beat_delay_milliseconds));
