@@ -147,7 +147,6 @@ fn generate_lead_frequencies(mut rng: &mut ThreadRng) -> Vec<usize> {
 
     // Choose 8 random notes
     (0..8)
-        .into_iter()
         .map(
             |_| match scale_notes.iter().choose(&mut rng).unwrap().pitch_class {
                 // Convert the pitch class of the note to a frequency

@@ -53,8 +53,8 @@ pub struct Sample {
     env_decay: f32,
     env_release: f32,
     env_sustain: f32,
-    dis_crunch: f32,
-    dis_drive: f32,
+    dis_crunch: Option<f32>,
+    dis_drive: Option<f32>,
 }
 
 impl Default for Sample {
@@ -67,15 +67,15 @@ impl Default for Sample {
             env_decay: 0.1,
             env_sustain: 0.5,
             env_release: 0.5,
-            dis_crunch: 0.0,
-            dis_drive: 1.0,
+            dis_crunch: None,
+            dis_drive: None,
         }
     }
 }
 
 impl Sample {
     /// Set the frequency of the oscillator in hertz.
-    pub fn osc_frequency<'a>(&'a mut self, frequency: usize) -> &'a mut Self {
+    pub fn osc_frequency(&mut self, frequency: usize) -> &mut Self {
         self.osc_frequency = frequency;
 
         self
@@ -86,50 +86,50 @@ impl Sample {
     /// See the [`OscillatorType`] enum for supported wave types.
     ///
     /// [`OscillatorType`]: enum.OscillatorType.html
-    pub fn osc_type<'a>(&'a mut self, oscillator: OscillatorType) -> &'a mut Self {
+    pub fn osc_type(&mut self, oscillator: OscillatorType) -> &mut Self {
         self.osc_type = oscillator;
 
         self
     }
 
     /// Set the time until the first envelope slope reaches it's maximum height.
-    pub fn env_attack<'a>(&'a mut self, attack: f32) -> &'a mut Self {
+    pub fn env_attack(&mut self, attack: f32) -> &mut Self {
         self.env_attack = attack;
 
         self
     }
 
     /// Set the time it takes from the maximum height to go into the main plateau.
-    pub fn env_decay<'a>(&'a mut self, decay: f32) -> &'a mut Self {
+    pub fn env_decay(&mut self, decay: f32) -> &mut Self {
         self.env_decay = decay;
 
         self
     }
 
     /// Set the height of the main plateau.
-    pub fn env_sustain<'a>(&'a mut self, sustain: f32) -> &'a mut Self {
+    pub fn env_sustain(&mut self, sustain: f32) -> &mut Self {
         self.env_sustain = sustain;
 
         self
     }
 
     /// Set the time it takes to go from the end of the plateau to zero.
-    pub fn env_release<'a>(&'a mut self, release: f32) -> &'a mut Self {
+    pub fn env_release(&mut self, release: f32) -> &mut Self {
         self.env_release = release;
 
         self
     }
 
     /// Overdrive that adds hard clipping.
-    pub fn dis_crunch<'a>(&'a mut self, crunch: f32) -> &'a mut Self {
-        self.dis_crunch = crunch;
+    pub fn dis_crunch(&mut self, crunch: f32) -> &mut Self {
+        self.dis_crunch = Some(crunch);
 
         self
     }
 
     /// Overdrive with soft clipping.
-    pub fn dis_drive<'a>(&'a mut self, drive: f32) -> &'a mut Self {
-        self.dis_drive = drive;
+    pub fn dis_drive(&mut self, drive: f32) -> &mut Self {
+        self.dis_drive = Some(drive);
 
         self
     }
@@ -236,10 +236,11 @@ impl Mixer {
         let oscillator = Oscillator::new(buffer, self.sample_rate);
 
         // Create the distortion if applicable
-        let distortion = if sample.dis_crunch == 0.0 && sample.dis_drive == 1.0 {
-            None
-        } else {
-            Some(Distortion::new(sample.dis_crunch, sample.dis_drive))
+        let distortion = match (sample.dis_crunch, sample.dis_drive) {
+            (Some(crunch), Some(drive)) => Some(Distortion::new(crunch, drive)),
+            (Some(crunch), None) => Some(Distortion::new(crunch, 1.0)),
+            (None, Some(drive)) => Some(Distortion::new(0.0, drive)),
+            (None, None) => None,
         };
 
         // Combine them in a generator
