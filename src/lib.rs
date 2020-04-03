@@ -166,8 +166,10 @@ impl Generator {
         // Apply the ADSR and set the state if we're finished or not
         if self.envelope.apply(&mut output, self.offset) == State::Done {
             self.finished = true;
+            return;
         }
 
+        // Apply the distortion
         if let Some(distortion) = &mut self.distortion {
             distortion.apply(&mut output, self.offset);
         }

@@ -28,7 +28,7 @@ impl Effect for Distortion {
             let sign = x.signum();
             // Make negative numbers positive, apply the power function and make them negative
             // again
-            *tone = (x * sign).powf(self.crunch) * sign;
+            *tone = (x * sign).powf(self.crunch).min(1.0) * sign;
         });
     }
 }

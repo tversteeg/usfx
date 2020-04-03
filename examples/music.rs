@@ -93,14 +93,16 @@ fn kick(rng: &mut ThreadRng) -> Vec<usfx::Sample> {
             .env_attack(0.05)
             .env_decay(0.05)
             .env_sustain(0.5)
-            .env_release(0.05),
+            .env_release(0.05)
+            .dis_crunch(0.1),
         *usfx::Sample::default()
             .osc_frequency(150)
             .osc_type(usfx::OscillatorType::Sine)
             .env_attack(0.1)
             .env_decay(0.1)
             .env_sustain(0.5)
-            .env_release(0.2),
+            .env_release(0.2)
+            .dis_crunch(0.2),
     ]
 }
 
@@ -112,7 +114,8 @@ fn hat() -> Vec<usfx::Sample> {
         .env_attack(0.01)
         .env_decay(0.01)
         .env_sustain(0.5)
-        .env_release(0.01)]
+        .env_release(0.01)
+        .dis_crunch(1.0)]
 }
 
 fn lead(lead_frequencies: &[usize], index: &mut usize) -> Vec<usfx::Sample> {
@@ -121,11 +124,12 @@ fn lead(lead_frequencies: &[usize], index: &mut usize) -> Vec<usfx::Sample> {
     // The lead synth, frequency is based on the generated scale
     vec![*usfx::Sample::default()
         .osc_frequency(lead_frequencies[*index])
-        .osc_type(usfx::OscillatorType::Saw)
-        .env_attack(0.02)
+        .osc_type(usfx::OscillatorType::Triangle)
+        .env_attack(0.01)
         .env_decay(0.1)
-        .env_sustain(0.9)
-        .env_release(0.3)]
+        .env_sustain(0.4)
+        .env_release(0.3)
+        .dis_crunch(1.0)]
 }
 
 fn generate_lead_frequencies(mut rng: &mut ThreadRng) -> Vec<usize> {

@@ -30,3 +30,7 @@ harness = false
 [[bench]]
 name = "mixer"
 harness = false
+
+[[bench]]
+name = "distortion"
+harness = false
