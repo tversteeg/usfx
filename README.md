@@ -14,5 +14,33 @@
 ## Example
 
 ```rust
-use usfx::*;
+// Create a simple blip sound
+let mut sample = usfx::Sample::default();
+
+// Use a sine wave oscillator
+sample.osc_type(usfx::OscillatorType::Sine);
+
+// Set the envelope
+sample.env_attack(0.02);
+sample.env_decay(0.05);
+sample.env_sustain(0.2);
+sample.env_release(0.5);
+
+// Add some distortion
+sample.dis_crunch(0.5);
+
+// Create a mixer so we can play the sound
+let mixer = usfx::Mixer::default();
+
+// Play our sample
+mixer.play(sample);
+
+// Plug our mixer into the audio device loop
+// ...
+mixer.generate(&mut audio_device_buffer);
 ```
+
+## Special Thanks
+
+- [sfxr-rs](https://github.com/bzar/sfxr-rs) - inspiration
+- [amsynth](https://github.com/amsynth/amsynth) - distortion algorithm
