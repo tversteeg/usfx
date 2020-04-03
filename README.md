@@ -40,6 +40,8 @@ mixer.play(sample);
 mixer.generate(&mut audio_device_buffer);
 ```
 
+The [`cpal`](examples/cpal.rs) & [`sdl`](examples/sdl2.rs) examples illustrate how to use it with different audio libraries. The [`music`](examples/music.rs) example shows how to create procedurally generated music with it (don't expect a masterpiece though, it's obvious I'm not a musician).
+
 ## Special Thanks
 
 - [sfxr-rs](https://github.com/bzar/sfxr-rs) - inspiration
