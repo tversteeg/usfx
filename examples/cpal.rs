@@ -83,7 +83,8 @@ fn main() {
     sample.env_attack(0.1);
     sample.env_decay(0.1);
     sample.env_sustain(0.5);
-    sample.env_release(0.1);
+    sample.env_release(0.5);
+    sample.dis_crunch(0.2);
 
     // Play a low sample with a square wave
     audio.play(sample);

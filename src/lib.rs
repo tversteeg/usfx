@@ -13,9 +13,11 @@
 #[cfg(test)]
 doc_comment::doctest!("../README.md");
 
+mod effects;
 mod envelope;
 mod oscillator;
 
+use effects::{distortion::Distortion, Effect};
 use envelope::{Envelope, State};
 use oscillator::Oscillator;
 pub use oscillator::OscillatorType;
@@ -51,10 +53,12 @@ pub struct Sample {
     env_decay: f32,
     env_release: f32,
     env_sustain: f32,
+    dis_crunch: f32,
+    dis_drive: f32,
 }
 
 impl Default for Sample {
-    /// The default is a 441hz wave with a sample rate of 441000.
+    /// The default is a sinewave of 441 hz.
     fn default() -> Self {
         Self {
             osc_frequency: 441,
@@ -63,6 +67,8 @@ impl Default for Sample {
             env_decay: 0.1,
             env_sustain: 0.5,
             env_release: 0.5,
+            dis_crunch: 0.0,
+            dis_drive: 1.0,
         }
     }
 }
@@ -113,6 +119,20 @@ impl Sample {
 
         self
     }
+
+    /// Overdrive that adds hard clipping.
+    pub fn dis_crunch<'a>(&'a mut self, crunch: f32) -> &'a mut Self {
+        self.dis_crunch = crunch;
+
+        self
+    }
+
+    /// Overdrive with soft clipping.
+    pub fn dis_drive<'a>(&'a mut self, drive: f32) -> &'a mut Self {
+        self.dis_drive = drive;
+
+        self
+    }
 }
 
 /// Convert samples with PCM.
@@ -132,6 +152,9 @@ struct Generator {
     oscillator: Oscillator,
     /// The ADSR envelope.
     envelope: Envelope,
+
+    /// Distortion effect.
+    distortion: Option<Distortion>,
 }
 
 impl Generator {
@@ -143,6 +166,10 @@ impl Generator {
         // Apply the ADSR and set the state if we're finished or not
         if self.envelope.apply(&mut output, self.offset) == State::Done {
             self.finished = true;
+        }
+
+        if let Some(distortion) = &mut self.distortion {
+            distortion.apply(&mut output, self.offset);
         }
 
         self.offset += output.len();
@@ -185,8 +212,7 @@ impl Mixer {
     pub fn new(sample_rate: usize) -> Self {
         Self {
             sample_rate,
-            generators: vec![],
-            oscillator_lookup: HashMap::new(),
+            ..Self::default()
         }
     }
 
@@ -207,12 +233,20 @@ impl Mixer {
         // Create the oscillator
         let oscillator = Oscillator::new(buffer, self.sample_rate);
 
+        // Create the distortion if applicable
+        let distortion = if sample.dis_crunch == 0.0 && sample.dis_drive == 1.0 {
+            None
+        } else {
+            Some(Distortion::new(sample.dis_crunch, sample.dis_drive))
+        };
+
         // Combine them in a generator
         let generator = Generator {
             finished: false,
             offset: 0,
             oscillator,
             envelope,
+            distortion,
         };
 
         // Use the generator
@@ -239,6 +273,7 @@ impl Mixer {
         // Set the buffer to zero
         output.iter_mut().for_each(|tone| *tone = 0.0);
 
+        // If there are no generators just return the empty buffer
         let generators_len = self.generators.len();
         if generators_len == 0 {
             return;
@@ -270,6 +305,8 @@ impl Mixer {
             Some(buffer) => RefCell::clone(buffer),
             // Nothing is found, cache a new buffer of frequencies
             None => {
+                // Build a lookup table and wrap it in a refcell so there can be multiple immutable
+                // references to it
                 let lut =
                     RefCell::new(oscillator_type.build_lut(frequency as f32, self.sample_rate));
 
