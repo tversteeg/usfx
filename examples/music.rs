@@ -88,34 +88,35 @@ fn kick(rng: &mut ThreadRng) -> Vec<usfx::Sample> {
     // Combine a short high punch with a longer low bass
     vec![
         *usfx::Sample::default()
+            .volume(0.5)
             .osc_frequency(rng.gen_range(155, 165))
             .osc_type(usfx::OscillatorType::Sine)
             .env_attack(0.05)
             .env_decay(0.05)
             .env_sustain(0.5)
-            .env_release(0.05)
-            .dis_crunch(0.1),
+            .env_release(0.1),
         *usfx::Sample::default()
+            .volume(0.3)
             .osc_frequency(150)
             .osc_type(usfx::OscillatorType::Sine)
             .env_attack(0.1)
             .env_decay(0.1)
             .env_sustain(0.5)
-            .env_release(0.2)
-            .dis_crunch(0.2),
+            .env_release(0.2),
     ]
 }
 
 fn hat() -> Vec<usfx::Sample> {
     // An annoying high chirpy sound
     vec![*usfx::Sample::default()
+        .volume(0.2)
         .osc_frequency(2000)
-        .osc_type(usfx::OscillatorType::Square)
+        .osc_type(usfx::OscillatorType::Triangle)
         .env_attack(0.01)
         .env_decay(0.01)
         .env_sustain(0.5)
-        .env_release(0.01)
-        .dis_crunch(1.0)]
+        .env_release(0.0)
+        .dis_crunch(2.0)]
 }
 
 fn lead(lead_frequencies: &[usize], index: &mut usize) -> Vec<usfx::Sample> {
@@ -123,13 +124,15 @@ fn lead(lead_frequencies: &[usize], index: &mut usize) -> Vec<usfx::Sample> {
 
     // The lead synth, frequency is based on the generated scale
     vec![*usfx::Sample::default()
+        .volume(0.5)
         .osc_frequency(lead_frequencies[*index])
-        .osc_type(usfx::OscillatorType::Triangle)
+        .osc_type(usfx::OscillatorType::Saw)
         .env_attack(0.01)
         .env_decay(0.1)
         .env_sustain(0.4)
         .env_release(0.3)
-        .dis_crunch(1.0)]
+        .dis_crunch(0.3)
+        .dis_drive(0.2)]
 }
 
 fn generate_lead_frequencies(mut rng: &mut ThreadRng) -> Vec<usize> {

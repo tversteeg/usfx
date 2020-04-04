@@ -47,6 +47,7 @@ use std::{cell::RefCell, collections::HashMap};
 /// [`Generator`]: struct.Generator.html
 #[derive(Debug, Copy, Clone)]
 pub struct Sample {
+    volume: f32,
     osc_frequency: usize,
     osc_type: OscillatorType,
     env_attack: f32,
@@ -61,6 +62,7 @@ impl Default for Sample {
     /// The default is a sinewave of 441 hz.
     fn default() -> Self {
         Self {
+            volume: 1.0,
             osc_frequency: 441,
             osc_type: OscillatorType::Sine,
             env_attack: 0.01,
@@ -74,7 +76,19 @@ impl Default for Sample {
 }
 
 impl Sample {
+    /// Set the volume which is a multiplier of the result.
+    ///
+    /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
+    /// values.
+    pub fn volume(&mut self, volume: f32) -> &mut Self {
+        self.volume = volume;
+
+        self
+    }
+
     /// Set the frequency of the oscillator in hertz.
+    ///
+    /// A range from 1-20000 is allowed.
     pub fn osc_frequency(&mut self, frequency: usize) -> &mut Self {
         self.osc_frequency = frequency;
 
@@ -93,6 +107,9 @@ impl Sample {
     }
 
     /// Set the time until the first envelope slope reaches it's maximum height.
+    ///
+    /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
+    /// values.
     pub fn env_attack(&mut self, attack: f32) -> &mut Self {
         self.env_attack = attack;
 
@@ -100,6 +117,9 @@ impl Sample {
     }
 
     /// Set the time it takes from the maximum height to go into the main plateau.
+    ///
+    /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
+    /// values.
     pub fn env_decay(&mut self, decay: f32) -> &mut Self {
         self.env_decay = decay;
 
@@ -107,6 +127,9 @@ impl Sample {
     }
 
     /// Set the height of the main plateau.
+    ///
+    /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
+    /// values.
     pub fn env_sustain(&mut self, sustain: f32) -> &mut Self {
         self.env_sustain = sustain;
 
@@ -114,6 +137,9 @@ impl Sample {
     }
 
     /// Set the time it takes to go from the end of the plateau to zero.
+    ///
+    /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
+    /// values.
     pub fn env_release(&mut self, release: f32) -> &mut Self {
         self.env_release = release;
 
@@ -121,6 +147,9 @@ impl Sample {
     }
 
     /// Overdrive that adds hard clipping.
+    ///
+    /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
+    /// values.
     pub fn dis_crunch(&mut self, crunch: f32) -> &mut Self {
         self.dis_crunch = Some(crunch);
 
@@ -128,6 +157,9 @@ impl Sample {
     }
 
     /// Overdrive with soft clipping.
+    ///
+    /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
+    /// values.
     pub fn dis_drive(&mut self, drive: f32) -> &mut Self {
         self.dis_drive = Some(drive);
 
@@ -148,6 +180,9 @@ struct Generator {
     pub(crate) finished: bool,
     /// The total offset.
     offset: usize,
+    /// Multiplier of the result.
+    volume: f32,
+
     /// The oscillator, because it's a trait it has to be boxed.
     oscillator: Oscillator,
     /// The ADSR envelope.
@@ -166,12 +201,16 @@ impl Generator {
         // Apply the ADSR and set the state if we're finished or not
         if self.envelope.apply(&mut output, self.offset) == State::Done {
             self.finished = true;
-            return;
         }
 
         // Apply the distortion
         if let Some(distortion) = &mut self.distortion {
             distortion.apply(&mut output, self.offset);
+        }
+
+        // Apply the volume
+        if self.volume != 1.0 {
+            output.iter_mut().for_each(|tone| *tone *= self.volume);
         }
 
         self.offset += output.len();
@@ -247,8 +286,11 @@ impl Mixer {
         let generator = Generator {
             finished: false,
             offset: 0,
+            volume: sample.volume,
+
             oscillator,
             envelope,
+
             distortion,
         };
 
