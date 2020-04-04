@@ -16,9 +16,11 @@
 ```rust
 // Create a simple blip sound
 let mut sample = usfx::Sample::default();
+sample.volume(0.5);
 
-// Use a sine wave oscillator
+// Use a sine wave oscillator at 500 hz
 sample.osc_type(usfx::OscillatorType::Sine);
+sample.osc_frequency(500);
 
 // Set the envelope
 sample.env_attack(0.02);
@@ -28,6 +30,7 @@ sample.env_release(0.5);
 
 // Add some distortion
 sample.dis_crunch(0.5);
+sample.dis_drive(0.9);
 
 // Create a mixer so we can play the sound
 let mixer = usfx::Mixer::default();
