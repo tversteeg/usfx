@@ -47,7 +47,7 @@ use std::{cell::RefCell, collections::HashMap};
 /// [`Generator`]: struct.Generator.html
 #[derive(Debug, Copy, Clone)]
 pub struct Sample {
-    volume: f32,
+    volume: Option<f32>,
     osc_frequency: usize,
     osc_type: OscillatorType,
     env_attack: f32,
@@ -62,7 +62,7 @@ impl Default for Sample {
     /// The default is a sinewave of 441 hz.
     fn default() -> Self {
         Self {
-            volume: 1.0,
+            volume: None,
             osc_frequency: 441,
             osc_type: OscillatorType::Sine,
             env_attack: 0.01,
@@ -81,7 +81,7 @@ impl Sample {
     /// A range from 0.0-1.0 will result in proper behavior, but you can experiment with other
     /// values.
     pub fn volume(&mut self, volume: f32) -> &mut Self {
-        self.volume = volume;
+        self.volume = Some(volume);
 
         self
     }
@@ -181,7 +181,7 @@ struct Generator {
     /// The total offset.
     offset: usize,
     /// Multiplier of the result.
-    volume: f32,
+    volume: Option<f32>,
 
     /// The oscillator, because it's a trait it has to be boxed.
     oscillator: Oscillator,
@@ -209,8 +209,8 @@ impl Generator {
         }
 
         // Apply the volume
-        if self.volume != 1.0 {
-            output.iter_mut().for_each(|tone| *tone *= self.volume);
+        if let Some(volume) = self.volume {
+            output.iter_mut().for_each(|tone| *tone *= volume);
         }
 
         self.offset += output.len();
