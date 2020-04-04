@@ -126,11 +126,12 @@ fn lead(lead_frequencies: &[usize], index: &mut usize) -> Vec<usfx::Sample> {
     vec![*usfx::Sample::default()
         .volume(0.5)
         .osc_frequency(lead_frequencies[*index])
-        .osc_type(usfx::OscillatorType::Saw)
-        .env_attack(0.01)
-        .env_decay(0.1)
+        .osc_type(usfx::OscillatorType::Square)
+        .osc_duty_cycle(usfx::DutyCycle::Eight)
+        .env_attack(0.02)
+        .env_decay(0.3)
         .env_sustain(0.4)
-        .env_release(0.3)
+        .env_release(0.5)
         .dis_crunch(0.3)
         .dis_drive(0.2)]
 }

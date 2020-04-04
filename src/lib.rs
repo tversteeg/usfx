@@ -20,7 +20,7 @@ mod oscillator;
 use effects::{distortion::Distortion, Effect};
 use envelope::{Envelope, State};
 use oscillator::Oscillator;
-pub use oscillator::OscillatorType;
+pub use oscillator::{DutyCycle, OscillatorType};
 use std::{cell::RefCell, collections::HashMap};
 
 /// Audio sample that procedurally generates it's sound.
@@ -50,6 +50,7 @@ pub struct Sample {
     volume: Option<f32>,
     osc_frequency: usize,
     osc_type: OscillatorType,
+    osc_duty_cycle: DutyCycle,
     env_attack: f32,
     env_decay: f32,
     env_release: f32,
@@ -65,6 +66,7 @@ impl Default for Sample {
             volume: None,
             osc_frequency: 441,
             osc_type: OscillatorType::Sine,
+            osc_duty_cycle: DutyCycle::default(),
             env_attack: 0.01,
             env_decay: 0.1,
             env_sustain: 0.5,
@@ -102,6 +104,16 @@ impl Sample {
     /// [`OscillatorType`]: enum.OscillatorType.html
     pub fn osc_type(&mut self, oscillator: OscillatorType) -> &mut Self {
         self.osc_type = oscillator;
+
+        self
+    }
+
+    /// Set the length of the pulse, this only applies when you use a square wave.
+    ///
+    /// Changing of the duty cycle mainly results in a different timbre.
+    /// A range from 0.0-1.0 will have results, other values won't do anything.
+    pub fn osc_duty_cycle(&mut self, duty_cycle: DutyCycle) -> &mut Self {
+        self.osc_duty_cycle = duty_cycle;
 
         self
     }
@@ -245,7 +257,7 @@ pub struct Mixer {
     /// Store the sample rate so we can keep oscillator buffers.
     sample_rate: usize,
     /// A lookup table of oscillator buffers.
-    oscillator_lookup: HashMap<(usize, OscillatorType), RefCell<Vec<f32>>>,
+    oscillator_lookup: HashMap<(usize, DutyCycle, OscillatorType), RefCell<Vec<f32>>>,
 }
 
 impl Mixer {
@@ -269,7 +281,8 @@ impl Mixer {
         );
 
         // Get the cached buffer (or automatically create a new one)
-        let buffer = self.oscillator_buffer(sample.osc_frequency, sample.osc_type);
+        let buffer =
+            self.oscillator_buffer(sample.osc_frequency, sample.osc_duty_cycle, sample.osc_type);
 
         // Create the oscillator
         let oscillator = Oscillator::new(buffer, self.sample_rate);
@@ -343,24 +356,31 @@ impl Mixer {
     fn oscillator_buffer(
         &mut self,
         frequency: usize,
+        duty_cycle: DutyCycle,
         oscillator_type: OscillatorType,
     ) -> RefCell<Vec<f32>> {
-        match self.oscillator_lookup.get(&(frequency, oscillator_type)) {
+        match self
+            .oscillator_lookup
+            .get(&(frequency, duty_cycle, oscillator_type))
+        {
             // A buffer was already cached, return it
             Some(buffer) => RefCell::clone(buffer),
             // Nothing is found, cache a new buffer of frequencies
             None => {
                 // Build a lookup table and wrap it in a refcell so there can be multiple immutable
                 // references to it
-                let lut =
-                    RefCell::new(oscillator_type.build_lut(frequency as f32, self.sample_rate));
+                let lut = RefCell::new(oscillator_type.build_lut(
+                    frequency as f32,
+                    duty_cycle,
+                    self.sample_rate,
+                ));
 
                 // Clone it so it can be returned after the original object is inserted
                 let cloned_ref = RefCell::clone(&lut);
 
                 // Add the new lookup table to the cache
                 self.oscillator_lookup
-                    .insert((frequency, oscillator_type), lut);
+                    .insert((frequency, duty_cycle, oscillator_type), lut);
 
                 cloned_ref
             }
