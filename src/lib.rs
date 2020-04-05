@@ -23,13 +23,14 @@
 //! sample.dis_drive(0.9);
 //!
 //! // Create a mixer so we can play the sound
-//! let mixer = usfx::Mixer::default();
+//! let mut mixer = usfx::Mixer::default();
 //!
 //! // Play our sample
 //! mixer.play(sample);
 //!
 //! // Plug our mixer into the audio device loop
 //! // ...
+//! # let mut audio_device_buffer = [0.0; 2000];
 //! mixer.generate(&mut audio_device_buffer);
 //! ```
 

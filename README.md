@@ -33,7 +33,7 @@ sample.dis_crunch(0.5);
 sample.dis_drive(0.9);
 
 // Create a mixer so we can play the sound
-let mixer = usfx::Mixer::default();
+let mut mixer = usfx::Mixer::default();
 
 // Play our sample
 mixer.play(sample);
