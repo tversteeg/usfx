@@ -65,73 +65,51 @@ impl OscillatorType {
         duty_cycle: DutyCycle,
         sample_rate: usize,
     ) -> Vec<f32> {
-        if self == OscillatorType::Noise {
-            // We handle noise differently because it needs a generator
-            let mut pcg = PCG32::seed(frequency as u64, 5);
+        // Create a table twice the size so we don't have to use modulo on every frame
+        let buffer_size = sample_rate * 2;
 
-            (0..sample_rate * 2)
-                .map(|_| formulas::f32_closed_neg_pos(pcg.next_u32()))
-                .collect()
-        } else {
-            let wave_func = self.wave_function();
-
-            // Create a table twice the size so we don't have to use modulo on every frame
-            (0..sample_rate * 2)
-                .map(|i| {
-                    wave_func(
-                        i as f32,
-                        frequency as f32,
-                        // Convert the duty cycle enum to the fractional number
-                        duty_cycle.to_frac(),
-                        sample_rate as f32,
-                    )
-                })
-                .collect()
-        }
-    }
-
-    /// The way the oscillator calculates the output wave.
-    ///
-    /// Used to build the lookup table.
-    fn wave_function(self) -> Box<dyn Fn(f32, f32, f32, f32) -> f32> {
         match self {
-            OscillatorType::Sine => Box::new(
-                |index: f32, frequency: f32, _duty_cycle: f32, sample_rate: f32| {
-                    (index * frequency * PI2 / sample_rate).sin()
-                },
-            ),
-            OscillatorType::Saw => Box::new(
-                |index: f32, frequency: f32, _duty_cycle: f32, sample_rate: f32| {
-                    let steps = sample_rate / frequency;
+            OscillatorType::Sine => {
+                // Move this calculation out of the loop for performance reasons
+                let mult = frequency as f32 * PI2 / sample_rate as f32;
 
-                    1.0 - ((index / steps) % 1.0) * 2.0
-                },
-            ),
-            OscillatorType::Triangle => Box::new(
-                |index: f32, frequency: f32, _duty_cycle: f32, sample_rate: f32| {
-                    let steps = sample_rate / frequency;
-
-                    let slope = (index / steps) % 1.0 * 2.0;
+                (0..buffer_size)
+                    .map(|index| (index as f32 * mult).sin())
+                    .collect()
+            }
+            OscillatorType::Saw => (0..buffer_size)
+                .map(|index| {
+                    1.0 - ((index as f32 / sample_rate as f32 / frequency as f32) % 1.0) * 2.0
+                })
+                .collect(),
+            OscillatorType::Triangle => (0..buffer_size)
+                .map(|index| {
+                    let slope = (index as f32 / sample_rate as f32 / frequency as f32) % 1.0 * 2.0;
                     if slope < 1.0 {
                         -1.0 + slope * 2.0
                     } else {
                         3.0 - slope * 2.0
                     }
-                },
-            ),
-            OscillatorType::Square => Box::new(
-                |index: f32, frequency: f32, duty_cycle: f32, sample_rate: f32| {
-                    let steps = sample_rate / frequency;
-
-                    if (index / steps) % 1.0 < duty_cycle {
+                })
+                .collect(),
+            OscillatorType::Square => (0..buffer_size)
+                .map(|index| {
+                    if (index as f32 / sample_rate as f32 / frequency as f32) % 1.0
+                        < duty_cycle.to_frac()
+                    {
                         1.0
                     } else {
                         -1.0
                     }
-                },
-            ),
-            // Implemented buffer-wide.
-            OscillatorType::Noise => unreachable!(),
+                })
+                .collect(),
+            OscillatorType::Noise => {
+                let mut pcg = PCG32::seed(frequency as u64, 5);
+
+                (0..buffer_size)
+                    .map(|_| formulas::f32_closed_neg_pos(pcg.next_u32()))
+                    .collect()
+            }
         }
     }
 }
