@@ -86,37 +86,25 @@ impl Audio {
 
 fn kick(rng: &mut ThreadRng) -> Vec<usfx::Sample> {
     // Combine a short high punch with a longer low bass
-    vec![
-        *usfx::Sample::default()
-            .volume(0.5)
-            .osc_frequency(rng.gen_range(155, 165))
-            .osc_type(usfx::OscillatorType::Sine)
-            .env_attack(0.05)
-            .env_decay(0.05)
-            .env_sustain(0.5)
-            .env_release(0.1),
-        *usfx::Sample::default()
-            .volume(0.3)
-            .osc_frequency(150)
-            .osc_type(usfx::OscillatorType::Sine)
-            .env_attack(0.1)
-            .env_decay(0.1)
-            .env_sustain(0.5)
-            .env_release(0.2),
-    ]
+    vec![*usfx::Sample::default()
+        .volume(0.5)
+        .osc_frequency(150)
+        .osc_type(usfx::OscillatorType::Triangle)
+        .env_attack(0.07)
+        .env_decay(0.05)
+        .env_sustain(0.9)
+        .env_release(rng.gen_range(0.1, 0.2))]
 }
 
 fn hat() -> Vec<usfx::Sample> {
     // An annoying high chirpy sound
     vec![*usfx::Sample::default()
         .volume(0.2)
-        .osc_frequency(2000)
-        .osc_type(usfx::OscillatorType::Triangle)
-        .env_attack(0.01)
-        .env_decay(0.01)
-        .env_sustain(0.5)
-        .env_release(0.0)
-        .dis_crunch(2.0)]
+        .osc_type(usfx::OscillatorType::Noise)
+        .env_attack(0.02)
+        .env_decay(0.02)
+        .env_sustain(0.7)
+        .env_release(0.0)]
 }
 
 fn lead(lead_frequencies: &[usize], index: &mut usize) -> Vec<usfx::Sample> {

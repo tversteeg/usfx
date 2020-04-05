@@ -11,6 +11,9 @@ description = "Realtime procedurally generated sound effects"
 keywords = ["sfx", "audio", "gamedev", "sound", "procedural"]
 categories = ["game-development", "multimedia", "multimedia::audio", "simulation"]
 
+[dependencies]
+randomize = "3.0.1"
+
 [dev-dependencies]
 cpal = "0.11.0"
 criterion = "0.3.1"

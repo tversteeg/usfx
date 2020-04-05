@@ -77,6 +77,21 @@ fn criterion_benchmark(c: &mut Criterion) {
             freq += 1;
         });
     });
+    c.bench_function("noise wave setup", |b| {
+        let mut mixer = Mixer::new(2000);
+
+        let mut sample = Sample::default();
+        sample.osc_type(OscillatorType::Noise);
+
+        let mut freq = 1;
+        b.iter(|| {
+            sample.osc_frequency(freq);
+
+            mixer.play(sample);
+
+            freq += 1;
+        });
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

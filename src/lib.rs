@@ -1,12 +1,36 @@
-//! # Title
+//! # usfx
 //!
-//! Short description.
-//!
-//! Long description.
+//! Generate sound effects for your game in realtime.
 //!
 //! ## Example
 //! ```rust
-//! # use usfx::*;
+//! // Create a simple blip sound
+//! let mut sample = usfx::Sample::default();
+//! sample.volume(0.5);
+//!
+//! // Use a sine wave oscillator at 500 hz
+//! sample.osc_type(usfx::OscillatorType::Sine);
+//! sample.osc_frequency(500);
+//!
+//! // Set the envelope
+//! sample.env_attack(0.02);
+//! sample.env_decay(0.05);
+//! sample.env_sustain(0.2);
+//! sample.env_release(0.5);
+//!
+//! // Add some distortion
+//! sample.dis_crunch(0.5);
+//! sample.dis_drive(0.9);
+//!
+//! // Create a mixer so we can play the sound
+//! let mixer = usfx::Mixer::default();
+//!
+//! // Play our sample
+//! mixer.play(sample);
+//!
+//! // Plug our mixer into the audio device loop
+//! // ...
+//! mixer.generate(&mut audio_device_buffer);
 //! ```
 
 // Test the code in README.md
@@ -90,6 +114,7 @@ impl Sample {
 
     /// Set the frequency of the oscillator in hertz.
     ///
+    /// When using the noise oscillator type this will be the seed.
     /// A range from 1-20000 is allowed.
     pub fn osc_frequency(&mut self, frequency: usize) -> &mut Self {
         self.osc_frequency = frequency;
@@ -370,7 +395,7 @@ impl Mixer {
                 // Build a lookup table and wrap it in a refcell so there can be multiple immutable
                 // references to it
                 let lut = RefCell::new(oscillator_type.build_lut(
-                    frequency as f32,
+                    frequency,
                     duty_cycle,
                     self.sample_rate,
                 ));

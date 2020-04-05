@@ -1,3 +1,4 @@
+use randomize::{formulas, PCG32};
 use std::{cell::RefCell, f32::consts::PI};
 
 const PI2: f32 = PI * 2.0;
@@ -44,7 +45,13 @@ pub enum OscillatorType {
     /// Smooth sound, between sine & square.
     Triangle,
     /// Rich sound, between sine & saw.
+    ///
+    /// This wave type uses `osc_duty_cycle` from `Sample`.
     Square,
+    /// White noise, very noisy.
+    ///
+    /// `osc_frequency` is the seed for the RNG.
+    Noise,
 }
 
 impl OscillatorType {
@@ -54,24 +61,33 @@ impl OscillatorType {
     /// offset in it.
     pub(crate) fn build_lut(
         self,
-        frequency: f32,
+        frequency: usize,
         duty_cycle: DutyCycle,
         sample_rate: usize,
     ) -> Vec<f32> {
-        let wave_func = self.wave_function();
+        if self == OscillatorType::Noise {
+            // We handle noise differently because it needs a generator
+            let mut pcg = PCG32::seed(frequency as u64, 5);
 
-        // Create a table twice the size so we don't have to use modulo on every frame
-        (0..sample_rate * 2)
-            .map(|i| {
-                wave_func(
-                    i as f32,
-                    frequency,
-                    // Convert the duty cycle enum to the fractional number
-                    duty_cycle.to_frac(),
-                    sample_rate as f32,
-                )
-            })
-            .collect()
+            (0..sample_rate * 2)
+                .map(|_| formulas::f32_closed_neg_pos(pcg.next_u32()))
+                .collect()
+        } else {
+            let wave_func = self.wave_function();
+
+            // Create a table twice the size so we don't have to use modulo on every frame
+            (0..sample_rate * 2)
+                .map(|i| {
+                    wave_func(
+                        i as f32,
+                        frequency as f32,
+                        // Convert the duty cycle enum to the fractional number
+                        duty_cycle.to_frac(),
+                        sample_rate as f32,
+                    )
+                })
+                .collect()
+        }
     }
 
     /// The way the oscillator calculates the output wave.
@@ -114,6 +130,8 @@ impl OscillatorType {
                     }
                 },
             ),
+            // Implemented buffer-wide.
+            OscillatorType::Noise => unreachable!(),
         }
     }
 }
