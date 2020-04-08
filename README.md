@@ -45,6 +45,22 @@ mixer.generate(&mut audio_device_buffer);
 
 The [`cpal`](examples/cpal.rs) & [`sdl`](examples/sdl2.rs) examples illustrate how to use it with different audio libraries. The [`music`](examples/music.rs) example shows how to create procedurally generated music with it (don't expect a masterpiece though, it's obvious I'm not a musician).
 
+### CPAL Example
+
+To build the [`cpal`](examples/cpal.rs) & [`music`](examples/music.rs) examples on Linux you will need to have the alsa development libraries:
+
+```bash
+sudo apt install libasound2-dev
+```
+
+### SDL Example
+
+To build the [`sdl`](examples/sdl2.rs) you will need the SDL2 development libraries, on Linux:
+
+```bash
+sudo apt install libsdl2-dev
+```
+
 ## Special Thanks
 
 - [sfxr-rs](https://github.com/bzar/sfxr-rs) - inspiration
