@@ -79,12 +79,12 @@ impl OscillatorType {
             }
             OscillatorType::Saw => (0..buffer_size)
                 .map(|index| {
-                    1.0 - ((index as f32 / sample_rate as f32 / frequency as f32) % 1.0) * 2.0
+                    1.0 - ((index as f32 / sample_rate as f32 * frequency as f32) % 1.0) * 2.0
                 })
                 .collect(),
             OscillatorType::Triangle => (0..buffer_size)
                 .map(|index| {
-                    let slope = (index as f32 / sample_rate as f32 / frequency as f32) % 1.0 * 2.0;
+                    let slope = (index as f32 / sample_rate as f32 * frequency as f32) % 1.0 * 2.0;
                     if slope < 1.0 {
                         -1.0 + slope * 2.0
                     } else {
@@ -94,7 +94,7 @@ impl OscillatorType {
                 .collect(),
             OscillatorType::Square => (0..buffer_size)
                 .map(|index| {
-                    if (index as f32 / sample_rate as f32 / frequency as f32) % 1.0
+                    if (index as f32 / sample_rate as f32 * frequency as f32) % 1.0
                         < duty_cycle.to_frac()
                     {
                         1.0
