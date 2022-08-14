@@ -119,7 +119,7 @@ jobs:
           python-version: "3.7"
 
       # Install dotnet at a fixed version
-      - uses: actions/setup-dotnet@v1
+      - uses: actions/setup-dotnet@v2
         with:
           dotnet-version: "2.2.402"
 
