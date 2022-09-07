@@ -15,12 +15,12 @@ categories = ["game-development", "multimedia", "multimedia::audio", "simulation
 randomize = "3.0.1"
 
 [dev-dependencies]
-cpal = "0.11.0"
+cpal = "0.14.0"
 criterion = "0.3.1"
 doc-comment = "0.3.3"
 sdl2 = "0.33.0"
-rust-music-theory = "0.1.6"
-rand = "0.7.3"
+rust-music-theory = "0.2.0"
+rand = "0.8.5"
 
 [[bench]]
 name = "wave_type"
