@@ -128,8 +128,7 @@ fn generate_lead_frequencies(mut rng: &mut ThreadRng) -> Vec<usize> {
         4,
         Some(Mode::Phrygian),
         Direction::Ascending,
-    )
-        .unwrap();
+    ).unwrap();
 
     // Get the notes
     let scale_notes = scale.notes();
