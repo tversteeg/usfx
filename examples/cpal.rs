@@ -1,17 +1,17 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{SampleFormat, SampleRate, Stream, SupportedStreamConfig};
 use std::{
     sync::{Arc, Mutex},
     thread,
     time::Duration,
 };
-use cpal::{SampleFormat, SampleRate, Stream, SupportedStreamConfig};
 
 const SAMPLE_RATE: u32 = 44_100;
 
 /// Manages the audio.
 pub struct Audio {
     mixer: Arc<Mutex<usfx::Mixer>>,
-    stream: Stream
+    stream: Stream,
 }
 
 impl Audio {
@@ -25,7 +25,9 @@ impl Audio {
             .default_output_device()
             .expect("no output device available");
 
-        let config = device.supported_output_configs().expect("no output configs available")
+        let config = device
+            .supported_output_configs()
+            .expect("no output configs available")
             .find(|config| config.sample_format() == SampleFormat::F32);
 
         if config.is_none() {
@@ -34,21 +36,28 @@ impl Audio {
 
         let config = config.unwrap();
 
-        if config.min_sample_rate() > SampleRate(SAMPLE_RATE) || config.max_sample_rate() < SampleRate(SAMPLE_RATE) {
+        if config.min_sample_rate() > SampleRate(SAMPLE_RATE)
+            || config.max_sample_rate() < SampleRate(SAMPLE_RATE)
+        {
             panic!("44100 Hz not supported");
         }
 
-        let format = SupportedStreamConfig::new(config.channels(), SampleRate(SAMPLE_RATE), config.buffer_size().clone(), SampleFormat::F32);
+        let format = SupportedStreamConfig::new(
+            config.channels(),
+            SampleRate(SAMPLE_RATE),
+            config.buffer_size().clone(),
+            SampleFormat::F32,
+        );
 
         let stream_mixer = mixer.clone();
 
-        let stream = device.build_output_stream::<f32, _, _>(
-            &format.config(),
-            move |data, _| {
-                stream_mixer.lock().unwrap().generate(data)
-            },
-            |err| eprintln!("cpal error: {:?}", err),
-        ).expect("could not build output stream");
+        let stream = device
+            .build_output_stream::<f32, _, _>(
+                &format.config(),
+                move |data, _| stream_mixer.lock().unwrap().generate(data),
+                |err| eprintln!("cpal error: {:?}", err),
+            )
+            .expect("could not build output stream");
 
         let struct_mixer = mixer.clone();
         Self {
