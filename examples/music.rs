@@ -19,7 +19,6 @@ const SAMPLE_RATE: u32 = 44_100;
 const BPM: f32 = 132.0;
 
 /// Manages the audio.
-#[allow(clippy::new_without_default)] //stream doesn't support default
 pub struct Audio {
     mixer: Arc<Mutex<usfx::Mixer>>,
     stream: Stream,
@@ -27,6 +26,7 @@ pub struct Audio {
 
 impl Audio {
     /// Instantiate a new audio object without a generator.
+    #[allow(clippy::new_without_default)] //stream doesn't support default
     pub fn new() -> Self {
         let mixer = Arc::new(Mutex::new(usfx::Mixer::new(SAMPLE_RATE as usize)));
         // Setup the audio system
@@ -60,7 +60,7 @@ impl Audio {
             SampleFormat::F32,
         );
 
-        let stream_mixer = mixer;
+        let stream_mixer = mixer.clone();
 
         let stream = device
             .build_output_stream::<f32, _, _>(
@@ -70,7 +70,7 @@ impl Audio {
             )
             .expect("could not build output stream");
 
-        let struct_mixer = mixer.clone();
+        let struct_mixer = mixer;
         Self {
             mixer: struct_mixer,
             stream,
