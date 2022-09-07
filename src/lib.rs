@@ -232,18 +232,18 @@ struct Generator {
 
 impl Generator {
     /// Generate the sound for the sample.
-    fn run(&mut self, mut output: &mut [f32]) {
+    fn run(&mut self, output: &mut [f32]) {
         // Run the oscillator
-        self.oscillator.generate(&mut output, self.offset);
+        self.oscillator.generate(output, self.offset);
 
         // Apply the ADSR and set the state if we're finished or not
-        if self.envelope.apply(&mut output, self.offset) == State::Done {
+        if self.envelope.apply(output, self.offset) == State::Done {
             self.finished = true;
         }
 
         // Apply the distortion
         if let Some(distortion) = &mut self.distortion {
-            distortion.apply(&mut output, self.offset);
+            distortion.apply(output, self.offset);
         }
 
         // Apply the volume
