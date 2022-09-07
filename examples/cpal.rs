@@ -9,6 +9,7 @@ use std::{
 const SAMPLE_RATE: u32 = 44_100;
 
 /// Manages the audio.
+#[allow(clippy::new_without_default)] //stream doesn't support default
 pub struct Audio {
     mixer: Arc<Mutex<usfx::Mixer>>,
     stream: Stream,
@@ -49,7 +50,7 @@ impl Audio {
             SampleFormat::F32,
         );
 
-        let stream_mixer = mixer.clone();
+        let stream_mixer = mixer;
 
         let stream = device
             .build_output_stream::<f32, _, _>(
