@@ -15,7 +15,7 @@ categories = ["game-development", "multimedia", "multimedia::audio", "simulation
 randomize = "3.0.1"
 
 [dev-dependencies]
-cpal = "0.14.0"
+cpal = "0.14.1"
 criterion = "0.4.0"
 doc-comment = "0.3.3"
 sdl2 = "0.35.2"
