@@ -51,6 +51,10 @@ jobs:
       # Install cargo-hack
       - uses: taiki-e/install-action@cargo-hack
 
+      - name: Install test dependencies
+        run: sudo apt-get install libasound2-dev libsdl2-dev
+        if: matrix.os == 'ubuntu-latest'
+
       # Test all feature combinations on the target platform
       - name: Test
         run: cargo hack --feature-powerset test
