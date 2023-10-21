@@ -15,7 +15,7 @@ categories = ["game-development", "multimedia", "multimedia::audio", "simulation
 randomize = "3.0.1"
 
 [dev-dependencies]
-cpal = "0.14.1"
+cpal = "0.15.2"
 criterion = "0.4.0"
 sdl2 = "0.35.2"
 rust-music-theory = "0.2.0"

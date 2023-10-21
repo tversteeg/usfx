@@ -57,6 +57,7 @@ impl Audio {
                 &format.config(),
                 move |data, _| stream_mixer.lock().unwrap().generate(data),
                 |err| eprintln!("cpal error: {:?}", err),
+                None,
             )
             .expect("could not build output stream");
 
