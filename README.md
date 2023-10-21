@@ -1,7 +1,4 @@
 <h1 align="center">μsfx</h1>
-<p align="center">
-	Generate sound effects for your game in realtime.
-</p>
 	
 <p align="center">
 	<a href="https://github.com/tversteeg/usfx/actions"><img src="https://github.com/tversteeg/usfx/workflows/CI/badge.svg" alt="CI"/></a>
@@ -10,6 +7,10 @@
 	<img src="https://img.shields.io/crates/l/usfx.svg" alt="License"/>
 	<br/>
 </p>
+
+<!-- cargo-rdme start -->
+
+Generate sound effects for your game in realtime.
 
 ## Example
 
@@ -42,6 +43,8 @@ mixer.play(sample);
 // ...
 mixer.generate(&mut audio_device_buffer);
 ```
+
+<!-- cargo-rdme end -->
 
 The [`cpal`](examples/cpal.rs) & [`sdl`](examples/sdl2.rs) examples illustrate how to use it with different audio libraries. The [`music`](examples/music.rs) example shows how to create procedurally generated music with it (don't expect a masterpiece though, it's obvious I'm not a musician).
 

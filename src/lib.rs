@@ -1,8 +1,7 @@
-//! # usfx
-//!
 //! Generate sound effects for your game in realtime.
 //!
 //! ## Example
+//!
 //! ```rust
 //! // Create a simple blip sound
 //! let mut sample = usfx::Sample::default();
@@ -33,10 +32,6 @@
 //! # let mut audio_device_buffer = [0.0; 2000];
 //! mixer.generate(&mut audio_device_buffer);
 //! ```
-
-// Test the code in README.md
-#[cfg(test)]
-doc_comment::doctest!("../README.md");
 
 mod effects;
 mod envelope;
