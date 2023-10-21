@@ -64,6 +64,10 @@ To build the [`sdl`](examples/sdl2.rs) you will need the SDL2 development librar
 sudo apt install libsdl2-dev
 ```
 
+## Tools
+
+- [usfx-test](https://github.com/emmabritton/uxfs-test) - pretty GUI program for playing with the parameters by @emmabritton
+
 ## Special Thanks
 
 - [sfxr-rs](https://github.com/bzar/sfxr-rs) - inspiration
