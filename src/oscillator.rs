@@ -1,9 +1,12 @@
 use randomize::{formulas, PCG32};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::{cell::RefCell, f32::consts::PI};
 
 const PI2: f32 = PI * 2.0;
 
 /// Possible values for the duty cycle of the square wave.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub enum DutyCycle {
     /// A duty cycle of 12.5%.
@@ -36,6 +39,7 @@ impl Default for DutyCycle {
 }
 
 /// Wave form generation type.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub enum OscillatorType {
     /// A continuus tone.
