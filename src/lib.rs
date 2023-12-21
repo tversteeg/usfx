@@ -42,6 +42,8 @@ use envelope::{Envelope, State};
 use oscillator::Oscillator;
 pub use oscillator::{DutyCycle, OscillatorType};
 use std::{cell::RefCell, collections::HashMap};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// Audio sample that procedurally generates it's sound.
 ///
@@ -65,6 +67,7 @@ use std::{cell::RefCell, collections::HashMap};
 /// ```
 ///
 /// [`Generator`]: struct.Generator.html
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Copy, Clone)]
 pub struct Sample {
     volume: Option<f32>,
