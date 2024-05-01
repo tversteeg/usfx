@@ -17,7 +17,7 @@ serde = ["dep:serde"]
 
 [dependencies]
 randomize = "3.0.1"
-serde = { version = "1.0.199", features = ["derive"], optional = true }
+serde = { version = "1.0.200", features = ["derive"], optional = true }
 
 [dev-dependencies]
 cpal = "0.15.3"
