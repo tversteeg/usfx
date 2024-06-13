@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6](https://github.com/tversteeg/usfx/compare/v0.1.5...v0.1.6) - 2024-06-13
+
+### Fixed
+- *(deps)* update rust crate serde to 1.0.200
+- *(deps)* update rust crate serde to 1.0.199
+- *(deps)* update rust crate serde to 1.0.198
+- *(deps)* update rust crate serde to 1.0.197
+- *(deps)* update rust crate serde to 1.0.196
+- *(deps)* update rust crate serde to 1.0.195
+- *(deps)* update rust crate serde to 1.0.194
+
+### Other
+- *(deps)* update rust crate sdl2 to 0.37.0
+- *(deps)* update rust crate cpal to 0.15.3
+- *(deps)* update swatinem/rust-cache action to v2.7.3
+- *(deps)* update swatinem/rust-cache action to v2.7.2
+
 ## [0.1.5](https://github.com/tversteeg/usfx/compare/v0.1.4...v0.1.5) - 2023-12-21
 
 ### Added
