@@ -16,7 +16,7 @@ default = []
 serde = ["dep:serde"]
 
 [dependencies]
-randomize = "3.0.1"
+randomize = "5.0.0"
 serde = { version = "1.0.200", features = ["derive"], optional = true }
 
 [dev-dependencies]
