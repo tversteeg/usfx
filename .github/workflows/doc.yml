@@ -25,7 +25,7 @@ jobs:
       - name: Run cargo-rdme
         run: cargo rdme
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: ${{ steps.last-commit-message.outputs.msg }}
           commit_options: '--amend --no-edit'
