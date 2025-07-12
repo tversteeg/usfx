@@ -22,7 +22,7 @@ serde = { version = "1.0.200", features = ["derive"], optional = true }
 [dev-dependencies]
 cpal = "0.16.0"
 criterion = "0.6.0"
-sdl2 = { version = "0.37.0", features = ["bundled"] }
+sdl2 = { version = "0.38.0", features = ["bundled"] }
 rust-music-theory = "0.2.0"
 rand = "0.8.5"
 
