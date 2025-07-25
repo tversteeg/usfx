@@ -24,7 +24,7 @@ cpal = "0.16.0"
 criterion = "0.7.0"
 sdl2 = { version = "0.38.0", features = ["bundled"] }
 rust-music-theory = "0.2.0"
-rand = "0.8.5"
+rand = "0.9.0"
 
 [[bench]]
 name = "wave_type"
